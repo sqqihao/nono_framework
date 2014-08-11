@@ -1,0 +1,21 @@
+{
+  "name": "nono_classPrototype",
+  "version": "0.0.0",
+  "description": "0.0.1",
+  "main": "class.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqqihao/nonoPrototype.git"
+  },
+  "keywords": [
+    "frameword"
+  ],
+  "author": "qihao+nono",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sqqihao/nonoPrototype/issues"
+  }
+}
