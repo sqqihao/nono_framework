@@ -23,11 +23,12 @@ f.map = function( arg ,fn ) {
 	};
 	return result;
 };
+//for in 循环里面的key 一直是字符串,for in 循环数组的时候要注意 
 f.each = function( arg ,fn) {
 	var type =  Object.prototype.toString.call(arg).slice(8,-1).toLowerCase();
 	for(var index in arg) {
 		if ( type === "array"&&(Number(index)) === (Number(index)) ) {
-			fn( arg[index] );
+			fn( arg[index] , Number(index) );
 		}else if( type === "object" ) {
 			fn( index, arg[index] );
 		};
@@ -108,6 +109,16 @@ f.prototype = {
 		};
 		if( str instanceof f ) {
 			return str;
+		};
+		
+		if( str.nodeType && str.nodeType === 9){
+			this.el = [str];
+			return;
+		};
+		
+		if( str.top && str.self && str.window ) {
+			this.el = [str];
+			return;
 		};
 		
 		if( !context ) context = document;
@@ -549,9 +560,30 @@ f.extend(true,f.prototype,{
 	}
 	
 });
+
 //div1.bind("click",function(){alert(2)})
 //事件模块;DOM2;
-
+f.extend(true,f.prototype,{
+	bind2 : function(ev, fn, capture) {
+		capture = capture || false;
+		if( document.addEventListener ) {
+			this.el[0].addEventListener(ev, fn, false);
+		}else if( obj.attachEvent ) {
+			this.el[0].attachEvent("on"+ev , fn)
+		}else{
+			this.el[0]["on"+ev] = fn;
+		};
+	},
+	unbind2 : function(ev, fn) {
+		if( document.addEventListener ) {
+			this.el[0].removeEventListener(ev, fn, false);
+		}else if( obj.attachEvent ) {
+			this.el[0].detachEvent("on"+ev , fn)
+		}else{
+			this.el[0]["on"+ev] = fn;
+		};
+	}
+});
 //shadow_box,返回沙盒的 doc和 win;
 f.extend(true,f,{
 	shadow : function( fn ) {
@@ -846,10 +878,252 @@ df.then(function(){l("run succ ,return deferred"); return df2},function(){l("fai
 df.fire();
 */
 
-//加载器,好难写;
-f.extend(true,f.prototype,{
+//util工具方法
+f.extend(true, f,{
+	//
+	contains : function(obj, target) {
+		if( f.isArray( obj ) ) {
+			return !!obj.indexOf(target);
+		}else{
+			
+		}
+	},
+	/*	
+	function test1(a, b) {
+		console.log(a);
+		l(b)
+	};
+	*/
+	//f.invoke(test1,1,2)()
+	invoke : function(fn) {
+		var args = Array.prototype.slice.call( arguments );
+		if(typeof args[0] === "function") {
+			args = args.slice( 1 );
+			return function() {
+				fn.apply(null, args);
+			};
+		};
+	},
+	pluck : function( obj ) {
+		var aResult = [];
+		f.each( obj , function(k, v) {
+			aResult.push( k );
+		});
+		return aResult;
+	},
+	"min" : function() {
+		//return Math.min(arguments);这个返回的一直是NaN;
+		return Math.min.apply(Math,arguments);
+	},
+	"max" : function() {
+		//return Math.man(arguments);这个返回的一直是NaN,不能传伪数组.如果要传伪数组就要用劫持作用域用apply;
+		return Math.max.apply(Math,arguments);
+	},
+	//理解为重新排序
+	shuffer : function( arr ) {
+		var len = arr.length;
+		var tmp;
+		var r, r2;
+		f.each(arr,function() {
+			r = Math.floor( len*Math.random() );
+			r2 = Math.floor( len*Math.random() )
+			tmp = arr[ r ];
+			arr[r] = arr[r2];
+			arr[r2] = tmp;
+		});
+		return arr;
+	},
+	size : function( obj ) {
+		if( f.isArray(obj) ) return obj.length;
+		if( f.isObject(obj) ) return f.pluck( obj ).length; 
+	},
+	flaten : function( arr ) {
+		var result = [];
+		f.each( arr ,function( a ) {
+			if( f.isArray(a) ){
+				result = result.concat( f.flaten( a ) );
+			}else{
+				result = result.concat( a );
+			}
+		});
+		return result.concat([]);
+	},
+	unique : function( arr ) {
+		var result = [];
+		f.each(arr, function(a , index) {
+			if(arr.indexOf( a ) === index ) {
+				result.push( a );
+			}
+		});
+		return result;
+	},
+	filter : function( arr, iterator ,context) {
+		var result = [];
+		f.each(arr, function( a, index) {
+			if( iterator.call(context, a ,index) ) {
+				result.push( a );
+			}
+		});
+		return result;
+	},
+	intersection : function(arr) {
+		var result = []
+		var arr2 = (Array.prototype.slice.call(arguments,1)).shift();
+		return f.filter(arr.concat([]), function(a){
+			return arr2.indexOf( a ) !== -1;
+		});
+	},
+	every : function(obj, iterator ,context) {
+		var flag = true;
+		f.each(obj, function(e) {
+			if( !iterator(e) )flag=false;
+		});
+		return flag;
+	},
+	same : function(obj, iterator ,context) {
+		var flag = false;
+		f.each(obj, function(e) {
+			if( iterator(e) )flag=true;
+		});
+		return flag;
+	},
+	compact : function( arr ) {
+		return f.filter(arr, function( a ) {
+			return a;
+		});
+	},
+	object : function(list ,value) {
+		var result = {};
+		for(var i=0, len = list.length; i<len; i++) {
+			if( value ) {
+				result[ list[i] ] = value[i]; 
+			}else{
+				result[i] = list[i];
+			};
+		};
+		return result;
+	},
+	bindAll : function(obj) {
+		var funcs = Array.prototype.slice.call( arguments, 1 );
+		f.each( funs, function(fn) {
+			f.proxy(obj,funs);
+		} );
+	},
+	delay : function(func, wait) {
+		var args = Array.prototype.slice.call( arguments, 2 );
+		return setTimeout(f.proxy(func, args) ,wait);
+	},
+	throttle : function(func ,wait) {
+		var args = "";
+		var previous;
+		var now;
+		return function() {
+			now = new Date();
+			args = arguments;
+			if(!previous || (now - previous)>wait) {
+				func.apply(null,args);
+				previous = new Date();
+			}else{
+				return "no trigger"
+			}
+		};
+	},
+	once : function(func) {
+		var ran = false;
+		var arg = Array.prototype.slice.call(arguments);
+		var memo;
+		return function() {
+			if( ran )return memo;
+			ran = true;
+			memo = func.apply(null,arg.concat( arguments ));
+			return memo;
+		};
+	},
+	compose : function() {
+		var funcs = Array.prototype.slice.call( arguments );
+		return function() {
+			var args = Array.prototype.slice.call( arguments );
+			for(var i=0, len = funcs.length; i<len; i++) {
+				args[i] = funcs[i].apply(null, arguments);
+			};
+			return args;
+		};
+	},
+	keys : function( obj ) {
+		var result = [];
+		//注意，这个会把原型上面的属性显示出来;
+		for(p in obj){ result.push(p) };
+		return result;
+	},
+	defaults : function(obj) {
+		var args = Array.prototype.slice.call(arguments, 1);
+		f.each(args, function(source) {
+			if(source) {
+				for(var prop in source) {
+					if(obj[prop] === void 0)
+						obj[prop] = source[prop]
+				};
+			};
+		});
+		return obj;
+	},
+	isElement : function( obj ) {
+		return !!( obj && obj.nodeType === 1 )
+	},
+	isObject : function(obj) {
+		// Object(1) ==> Number{};
+		// Object("s22d") ==>{0:s,1:2,3:2,4:d };
+		// Object(null) ==> Object {};
+		// Object(NaN) ==> Number{};
+		// Obect(false) ==> Boolean{};
+		return obj === Object(obj);
+	},
+	"isNaN" : function( obj ){
+		//NaN是唯一typeof为数字，但是却不等于自己的数字;
+		if( typeof obj === "number" && obj !== obj){
+			return true;
+		};
+		return false;
+	},
+	has : function(obj, key) {
+		return Object.prototype.hasOwnProperty.call(obj, key);
+	},
+	//够无聊吧,哈哈 ==> f.times(100,function(a){return {a:a}});
+	times : function(n ,iterator, context) {
+		n = n || 0;
+		var accum = Array( Math.max(0, n) );
+		for(var i=0; i<n ;i++) {
+			accum[i] = iterator.call(context, i)
+		};
+		return accum;
+	},
+	getOffset : function( obj ) {
+		var parent = obj;
+		var x = 0, y = 0;
+		while( parent ) {
+			x += parent.offsetLeft;
+			y += parent.offsetTop;
+			parent = parent.offsetParent;
+		};
+		return {
+			x : x,
+			y : y
+		}
+	},
+	"docClient" : function() {
+		return { 
+			width : Math.max(document.documentElement.clientWidth,document.body.clientWidth) ,
+			height : Math.max(document.documentElement.clientHeight,document.body.clientHeight)
+		};
+	},
+	"docSroll" : function() {
+		return {
+			width : Math.max(document.documentElement.scrollWidth , document.body.scrollWidth),
+			height : Math.max(document.documentElement.scrollHeight , document.body.scrollHeight)
+		}
+	}
 });
-
+setTimeout("console.clear()",1);
 //JSON.Parse方法，这个方法不靠谱;
 f.extend(true,f,{
 	parseJSON : function(str) {
@@ -997,6 +1271,292 @@ f.extend(true,f,{
 		document.body.append( scr );
 	}
 });
+
+/*
+f.subscribe("ev1",function(a,b,c){console.log(a),console.log(b)});
+
+f.subscribe("ev1",function(a,b,c,d,e){console.log(a),l(b),l(c),l(d)},3,4);
+
+f.subscribe("ev1",function(a){console.log(a)});
+
+f.publish("ev1","1,2",2);
+*/
+//publish,subscribe
+f.extend(true,f,{
+	publish : function( obj ) {
+		var args = Array.prototype.slice.call(arguments, 1);
+		var subList = this._subList = this._subList || {};
+		for(var i=0, len = subList[obj].length, subListFns = subList[obj]; i<len; i++) {
+			if(typeof subListFns[i] === "function") {
+				subListFns[i].apply(null, args);
+			};
+		};
+		return this;
+	},
+	subscribe : function( obj, fn ) {
+		var subList = this._subList = this._subList || {};
+		var fns = subList[obj] = subList[obj] || [];
+		var args = Array.prototype.slice.call(arguments, 2);
+		var _fn = fn;
+		var fn = function() {
+			var innnerArg = Array.prototype.slice.call(arguments, 0);
+			args = innnerArg.concat( args );
+			return _fn.apply(null, args);
+		};
+		
+		fns.push( fn );
+		
+		return fns.length-1;
+	},
+	deleteSubscribe : function( obj , fn) {
+		if( typeof obj === "string" && (typeof fn === "number" || typeof fn === "function")) {
+			var subList = this._subList = this._subList || {};
+			var index = 0;
+			if( typeof fn === "number" ) {
+				index = fn;
+				subList[obj].splice(fn, 1 );
+			}else{
+				index = subList[obj].indexOf(fn);
+				subList[obj].splice(index, 1 );
+			};
+			
+			return index;
+		};
+		if( typeof obj === "string" ) {
+			var subList = this._subList = this._subList || {};
+			subList[obj] = [];
+		};
+	}
+});
+
+/*
+data = {
+	name : "qihao",
+	age : "26"
+};
+var tpl = "myname is <% name %> , age is : <% age %>";
+f.format(tpl, data);
+*/
+f.extend(true,f,{
+	//简单的模版引擎
+	format : function(tpl, data) {
+		var rTpl = /<%([^%>]+)%>/gi;
+		return tpl.replace(rTpl, function(full,key) {
+			return data[f.trim(key)]
+		});
+	},
+	//比较高级的模版引擎;
+	template : function(tpl, data) {
+		var rTpl = /<%([^%>]+)%>/gi;
+		var reExp = /(^( )?(if|for|else|switch|case|break|{|}))(.*)?/g;
+		var strResult = "var arr = [];";
+		var tmp = "";
+		var index = 0;
+		while( tmp = rTpl.exec(tpl) ) {
+			//tmp = ["<% name %>", " name ", index: 10, input: "myname is <% name %> , age is : <% age %>"] 
+			//l(tmp);
+			strResult += (';arr.push( "' + tpl.substring(index,tmp.index) + '" );');
+			//console.log( reExp.test(tmp[1]) );如果是js的语句;
+			//这个要判断是否是js语句，先进行非js语句的执行
+			//strResult += arr.push( "+" + tmp[1] + "+" );
+			//strResult = "";
+			//如果不是js的语句;
+			if( !(tmp[1].match(reExp)) ) {
+				strResult += (';arr.push( ""+' + tmp[1] + '+"" );' );
+			}else{
+				strResult += tmp[1];
+			};
+			index = tmp.index + tmp[0].length;
+		};
+		strResult += (';arr.push( "' + tpl.substring(index) + '" );return arr.join("")');
+		return new Function( strResult ).call(data);
+	}
+});
+
+(function() {
+	var Resize = function() {
+	};
+	var Dialog = function() {
+	};
+	var Accordion = function() {
+	};
+	var Button = function() {
+	};
+	var Menu = function() {
+	};
+	var Progressbar = function() {
+	};
+	var Slide = function() {
+	};
+	var Spinner = function() {
+	};
+	var Tabs = function() {
+	};
+	var Tooltip = function() {
+	};
+	var Dragable = function( setting ) {
+		if(! this instanceof Dragable) {
+			return new Dragable( obj );
+		};
+		var defaults = {
+			el : this || f(setting.el)
+		};
+		f.defaults(defaults ,setting);
+		this.defaults = defaults;
+		Dragable.prototype.init( defaults );
+	};
+	Dragable.prototype = {
+		constructor : Dragable,
+		init : function( defaults ) {
+			this.setPosition( defaults.el );
+			this.ev( defaults );
+		},
+		setPosition : function( el ) {
+			var posStatus;
+			if( (posStatus = el.css("position")) !== "relative" || posStatus !== "absolute" ) {
+				var l = el.css("left");
+				var t = el.css("top");
+				var w = el.css("width");
+				var h = el.css("height");
+				
+				el.css("position","absolute");
+				
+				el.css("top", t);
+				el.css("height", h);
+				el.css("left", l);
+				el.css("width", w);
+			};
+		},
+		ev : function(defaults) {
+			var el = defaults.el;
+			var dx , dy;
+			dx = 0;
+			dy = 0;
+			
+			var moveFn = function(ev) {
+				var ev = ev || window.event;
+				var x = ev.clientX - dx;
+				var y = ev.clientY - dy;
+				
+				if( defaults.clientScreen ) {
+					var xy = f.docClient();
+					var range = {
+						x : Math.max.apply(Math,[ xy.width-parseInt(f(el.el[0]).css("width")) - parseInt(f(el.el[0]).css("margin-left"))-parseInt(f(el.el[0]).css("margin-right")) ]),
+						y : Math.max.apply(Math,[ xy.height-parseInt(f(el.el[0]).css("height")) - parseInt(f(el.el[0]).css("margin-top")) - parseInt(f(el.el[0]).css("margin-bottom"))]),
+						top : 0,
+						left : 0
+					};
+				};
+				if( defaults.clientScreen || restrict ) {
+					if( x>range.x ) {
+						x  = range.x;
+					};
+					if( y>range.y ) {
+						y  = range.y;
+					};
+					if( x<range.left ) {
+						x = range.left
+					};
+					if( y<range.top ) {
+						y = range.top;
+					};
+				};
+				el.css("left", x);
+				el.css("top", y);
+			};
+			
+			el.bind("mousedown",function( ev ) {
+				var ev = ev || window.event;
+				var el = defaults.el;
+				var offset = f.getOffset(el.el[0]);
+				var x = ev.clientX - offset.x;
+				var y = ev.clientY - offset.y;
+				
+				dx = x;
+				dy = y;
+				
+				f(document).bind2("mousemove",moveFn,false);
+				f(document).bind2("mouseup",function() {
+					f(document).unbind2("mousemove",moveFn,false);
+				});
+			});
+		}
+	};
+	f.extend(true,f.prototype, {
+		Dragable : Dragable,
+		Resize : Resize,
+		Dialog : Dialog,
+		Accordion : Accordion,
+		Button : Button,
+		Menu : Menu,
+		Progressbar : Progressbar,
+		Slide : Slide,
+		Spinner : Spinner,
+		Tabs : Tabs,
+		Tooltip : Tooltip
+	});
+})();
+/*
+var rTpl = /<%([^%>]+)%>/gi;
+data = {
+	name : "qihao",
+	age : "26",
+	profile : {
+		hands : 2,
+		eye : 2
+	}
+};
+var tpl = "my name is <% this.name %> , age is : <% this.age %> , had <%this.profile.hands%> and <%this.profile.eye%>end";
+//'my name is '+ this.name +' , age is : '+ this.age +' , had '+this.profile.hands+' and '+this.profile.eye+'end'
+//f.template(tpl,data)//  ===> "my name is qihao , age is : 26 , had 2 and 2end"
+//l(f.template(tpl,data));
+
+var tpl = "my eye is three times biger then you <% for(var i=0; i<3; i++) {%> 111 <%}%> end";
+var tpl = "my eye is three times biger then you "+
+	"<% for(var i=0; i<3; i++) {%> "+
+	"<% this.name %>"+
+	"<% this.age %>"+
+	"<% } %> end" +
+	"<% this.profile.hands %>" +
+	"<% if(this.profile.eye) {%>" +
+	"<% this.profile.eye %> "+
+	"<%}%>";
+/*
+var arr = [];
+arr.push( "my eye is three times biger then you " );
+ for(var i=0; i<3; i++) {
+	 ;arr.push( " 111 " )
+};
+arr.push( " end" );
+return arr.join("")
+*/
+/*
+'my eye is three times biger then you '+ 
+for(var i=0; i<3; i++) {
+	+' 111 '+ 
+} +' end'
+var r = [];
+r.push('My skills:'); 
+for(var index in this.skills) {
+	r.push('<a href="">');
+	r.push(this.skills[index]);
+	r.push('</a>');
+};
+r.join('');
+/*
+(function() {
+	return "<p>Hello, my name is " + 
+		this.name + 
+		". I\'m " + 
+		this.profile.age + 
+		" years old.</p>";
+}).call({name : "qihao", profile : {age : "2"}});
+*/
+/*
+(new Function('return "<p>Hello, my name is " + this.name + ". I\'m " + this.profile.age + 	" years old.</p>"')).call({name : "qihao", profile : {age : "2"}});
+*/
+//new Function("return 'my eye is three times biger then you '+ for(var i=0; i<3; i++) {+' 111 '+ } +' end' " );
+//'my eye is three times biger then you '+ for(var i=0; i<3; i++) {+' 111 '+ } +' end' 
 
 //DOMReady
 f.ready = (function( win , doc ) {
