@@ -397,6 +397,7 @@ f.extend(true,f.prototype,{
 		}else{
 			return datas[key];
 		};
+		return this;
 	},
 	val : function( val ) {
 		if( "value" in this.first() ){		
@@ -406,12 +407,33 @@ f.extend(true,f.prototype,{
 				return this.first().value;
 			};
 		};
+		return this;
 	}
 });
 var i = f("#ipt1");
 var div1 = f("#div1");
 //DOM节点操作模块;
 f.extend(true,f.prototype,{
+	CE : function( tag , attr) {
+		var el = document.createElement(tag);
+		if(attr) {
+			switch( typeof attr ) {
+				case "object" : 
+					for(var p in attr) {
+						el.setAttribute( p , attr[p] );
+						if( p === "style") {
+							el.style = attr[p];
+						};
+						if( p === "class" ) {
+							el.className = attr[p];
+						};
+					};
+					
+				break;
+			};
+		};
+		return el;
+	},
 	append : function( target ) {
 		if( typeof target == "object" && target.nodeType === 1 ) {
 			this.first().appendChild( target );
@@ -436,6 +458,11 @@ f.extend(true,f.prototype,{
 		}else if(target instanceof f){
 			parent.insertBefore(target.first(), this.next().first());
 		};
+	},
+	remove : function() {
+		f.each(this.el, function(el , index) {
+			el.parentNode.removeChild( el );
+		});
 	},
 	next : function() {
 		var el = this.first();
@@ -569,7 +596,7 @@ f.extend(true,f.prototype,{
 		if( document.addEventListener ) {
 			this.el[0].addEventListener(ev, fn, false);
 		}else if( obj.attachEvent ) {
-			this.el[0].attachEvent("on"+ev , fn)
+			this.el[0].attachEvent("on"+ev , f.proxy(fn ,this.el[0]));
 		}else{
 			this.el[0]["on"+ev] = fn;
 		};
@@ -578,7 +605,7 @@ f.extend(true,f.prototype,{
 		if( document.addEventListener ) {
 			this.el[0].removeEventListener(ev, fn, false);
 		}else if( obj.attachEvent ) {
-			this.el[0].detachEvent("on"+ev , fn)
+			this.el[0].detachEvent("on"+ev , fn);
 		}else{
 			this.el[0]["on"+ev] = fn;
 		};
@@ -703,12 +730,11 @@ f.extend(true,f,{
 						initVal = parseInt( f(node).css(p) );
 						speed = (json[p] - initVal)*( (new Date().getTime()-startTime)/1000/time );
 						if( p === "opacity" ) {
-							l(speed);
 							node.style["opacity"] = (speed*100 + initVal*100)/100;
 						}else{
 							 node.style[p] = ( speed + initVal ) + "px";
 						}
-					  if(  parseInt( f(node).css(p) ) !== json[p] ) {
+					  if(  parseFloat( f(node).css(p) ) !== json[p] ) {
 							flag = false;
 						};
 					};
@@ -1269,6 +1295,9 @@ f.extend(true,f,{
 		var scr = document.createElement("script");
 		scr.src = url + "?" + f.serialize(data) + "&callback=" + callbackName;
 		document.body.append( scr );
+	},
+	loadCss : function( url ) {
+		f("head").append(f.prototype.CE("link" ,{href:url ,rel:"stylesheet",type:"text\/css"}) );
 	}
 });
 
@@ -1355,7 +1384,9 @@ f.extend(true,f,{
 		while( tmp = rTpl.exec(tpl) ) {
 			//tmp = ["<% name %>", " name ", index: 10, input: "myname is <% name %> , age is : <% age %>"] 
 			//l(tmp);
-			strResult += (';arr.push( "' + tpl.substring(index,tmp.index) + '" );');
+			strResult += (';arr.push( "' + tpl.substring(index,tmp.index).replace(/[\"\']/g,function( $$$$ ) {
+					return "\\"+$$$$;
+				}) + '" );');
 			//console.log( reExp.test(tmp[1]) );如果是js的语句;
 			//这个要判断是否是js语句，先进行非js语句的执行
 			//strResult += arr.push( "+" + tmp[1] + "+" );
@@ -1368,18 +1399,22 @@ f.extend(true,f,{
 			};
 			index = tmp.index + tmp[0].length;
 		};
-		strResult += (';arr.push( "' + tpl.substring(index) + '" );return arr.join("")');
+		strResult += (';arr.push( "' + tpl.substring(index).replace(/[\"\']/g,function( $$$$ ) {
+					return "\\"+$$$$;
+				}) + '" );return arr.join("")');
 		return new Function( strResult ).call(data);
 	}
 });
 
+f.extend(true,f,{
+	extend__proto__ : function( prototype ) {
+		var Fn = function() {};
+		Fn.prototype = prototype;
+		return new Fn;
+	}
+});
+
 (function() {
-	var Resize = function() {
-	};
-	var Dialog = function() {
-	};
-	var Accordion = function() {
-	};
 	var Button = function() {
 	};
 	var Menu = function() {
@@ -1394,10 +1429,22 @@ f.extend(true,f,{
 	};
 	var Tooltip = function() {
 	};
+	//这个是用作插件吧;
+	var scrollPlugin = function() {
+	};
+	var loader = function(){
+	}
+	/*
+	*new Dragable()
+	*{ range : { top : 100 ,left: 200, x : 0 , y : 0} }
+	*{ clientScreen : true }
+	*/
 	var Dragable = function( setting ) {
-		if(! this instanceof Dragable) {
-			return new Dragable( obj );
+		/*
+		if( !(this instanceof Dragable)) {
+			return new Dragable( setting );
 		};
+		*/
 		var defaults = {
 			el : this || f(setting.el)
 		};
@@ -1447,7 +1494,8 @@ f.extend(true,f,{
 						left : 0
 					};
 				};
-				if( defaults.clientScreen || restrict ) {
+				//如果是视区内 或者 在defaults有个range
+				if( defaults.clientScreen || defaults.range ) {
 					if( x>range.x ) {
 						x  = range.x;
 					};
@@ -1471,7 +1519,6 @@ f.extend(true,f,{
 				var offset = f.getOffset(el.el[0]);
 				var x = ev.clientX - offset.x;
 				var y = ev.clientY - offset.y;
-				
 				dx = x;
 				dy = y;
 				
@@ -1482,10 +1529,359 @@ f.extend(true,f,{
 			});
 		}
 	};
+	var Resize = function(setting, context) {
+		if(!(this instanceof Resize)) {
+			return new Resize( setting, this );
+		};
+		if( !(context instanceof f) ) {
+			context = f(context);
+		};
+		var eWrap = this.wrap( context );
+		var defaults = {
+			el : eWrap
+		};
+		f.defaults(defaults ,setting);
+		this.defaults = defaults;
+		this.init( defaults );
+		this.resizeElement();
+	};
+	//继承拖拽;
+	Resize.prototype = f.extend__proto__( Dragable.prototype );
+	//设置constructor;
+	Resize.prototype.constructor = Resize;
+	f.extend(true, Resize, {
+		getWrap : function() {
+			return '\
+			<div class="wrapSize">\
+				<div class="l"></div>\
+				<div class="r"></div>\
+				<div class="b"></div>\
+				<div class="t"></div>\
+			</div>'
+		} 
+	});
+	f.extend(true,Resize.prototype, {
+		/*这部分就是给他添加一个包裹的层,保存原来的context的样式数据*/
+		wrap : function( context ) {			
+			var oldParent = context.parent();
+			var oldWidth = parseInt( context.css("width") )+20;
+			var oldHeight = parseInt( context.css("height") )+20;
+			context.data( "width" , oldWidth )
+				.data( "height" , oldHeight)
+				.data("left" ,context.css("top"))
+				.data("top", context.css("top"))
+				.data("position",context.css("position"));
+				
+			context.css("left",10).css("top",10).css("position","absolute");
+			var wrapDiv = f(f.prototype.CE("div"));
+			wrapDiv.html( Resize.getWrap() );
+			var eWrap = f( ".wrapSize",wrapDiv.first() );
+			eWrap.append(context);
+			eWrap.css("width", oldWidth );
+			eWrap.css("height", oldHeight);
+			oldParent.append( eWrap );
+			
+			return eWrap;
+		},
+		resizeElement : function() {
+			this.left = f(".l",this.defaults.el.el[0]);
+			this.top = f(".t",this.defaults.el.el[0]);
+			this.right = f(".r",this.defaults.el.el[0]);
+			this.bottom = f(".b",this.defaults.el.el[0]);
+			var dx, dy;
+			var els = [this.left, this.top, this.right, this.bottom];
+			
+			f.each(els, function(el) {				
+				el.bind("mousedown",function( ev ) {
+					var offset = f.getOffset(el.el[0]);
+					var x = ev.clientX - offset.x;
+					var y = ev.clientY - offset.y;
+					dx = x;
+					dy = y;
+					f(document).bind2("mousemove",moveFn,false);
+					f(document).bind2("mouseup",function() {
+						f(document).unbind2("mousemove",moveFn,false);
+					});
+				});
+			});
+			var moveFn = function(ev) {
+				var ev = ev || window.event;
+				var el = f( ev.target || ev.srcElement );
+				var parentXY = f.getOffset( el.paren().first() );
+				var x = ev.clientX - dx - parentXY.x;
+				var y = ev.clientY - dy - parentXY.y;
+				
+				el.css("left", x);
+				el.css("top", y);
+				ev.stopPropagation();
+			};
+		}
+	});
+	/*
+	f(function() {		
+		var a = f("body");
+		a.Dialog();
+	});
+	*/
+	var Dialog = function(setting) {
+		if(!(this instanceof Dialog)) {
+			return new Dialog( setting, this );
+		};
+		setting = setting || {};
+		var defaults = {
+			id: null,
+			width: '200px;',
+			height: '100px;',
+			title : "title",
+			content : "content",
+			attach: null,
+			trigger: 'click',
+			preventDefault: false,
+			getTitle: null,
+			getContent: null,
+			position: {
+				x: 'center',
+				y: 'center'
+			},
+			adjustPosition: false,
+			adjustDistance: 5,
+			reposition: false,
+			pointer: false,
+			fade: 180,
+			animation: null,
+			theme: 'Default',
+			addClass: '',
+			overlay: false,
+			zIndex: 10000,
+			delayOpen: 0,
+			delayClose: 0,
+			closeOnEsc: false,
+			closeOnClick: false,
+			closeOnMouseleave: false,
+			closeButton: false,
+			draggable: true,
+			onInit: function() {},
+			onCreated: function() {},
+			onOpen: function() {},
+			onClose: function() {},
+			onConfirm : function() {},
+			autoClose: 7000,
+			color: null
+		};
+		f.extend(defaults ,setting)
+		this.defaults = defaults;
+		this.initDialog();
+	};
+	//Dialog.prototype = f.extend__proto__(Dragable.prototype);
+	f.extend(Dialog.prototype, {
+		contructor : Dialog,
+		initDialog : function() {
+			this.defaults.init&&this.defaults.init();
+			this.overlay();
+			this.createDialog();
+			this.setPosition();
+			this.defaults.onCreated&&this.defaults.onCreated();
+			this.defaults.draggable&&this.draggable();
+			this.dialogEvents();
+		},
+		createDialog : function() {
+			var dialog = f(f.prototype.CE("div",{ class : "f-dialog-wrap" ,className : "f-dialog-wrap" ,style:"height:"+this.defaults.height+";width:"+this.defaults.width+";z-index:"+this.defaults.zIndex++})).html( this.data("dialogHtml", {title: this.defaults.title,content:this.defaults.content}) );
+			f(document.body).append( dialog );
+			this.dialog = dialog;
+		},
+		overlay : function() {
+			var mask = f.prototype.CE("div",{class : "f-mask", className : "f-mask", style : "z-index:"+this.defaults.zIndex++ });
+			f(document.body).append( f(mask) );
+			this.mask = mask;
+		},
+		data : function( value ,attr ) {
+			switch( value ) {
+				case  "dialogHtml"  : 
+					var tpl = '<div class="f-dialog-container">'+
+					'<dl>'+
+						'<dt><% this.title %><a href="###" class="close fr">X</a></dt>'+
+						'<dd><% this.content %></dd>'+
+					'</dl>'+
+					'<div class="f-dialog-footer">' +
+						'<span class="close">关闭</span><span class="ok">确认</span>'+
+					'</div>' +
+				'</div>';
+				
+				return 	f.template(tpl, attr);
+			};
+		},
+		setPosition : function() {
+			var client = f.docClient();
+			this.dialog.css("left", (client.width-parseInt(this.dialog.css("width")))/2)
+				.css("top",(client.height-parseInt(this.dialog.css("height")))/2);
+		},
+		draggable : function() {
+			Dragable.call( this.dialog );
+		},
+		dialogEvents : function() {
+			var _this = this;
+			f.each( f(".close" , this.dialog.first()).el ,function(el ,index) {
+				f(el).bind2("click", function(ev) {
+					_this.dialog.remove();
+					_this.mask.remove();
+					_this.defaults.onClose();
+				});
+			});
+			f.each( f(".ok" , this.dialog.first()).el ,function(el ,index) {
+				f(el).bind2("click", function(ev) {
+					_this.dialog.remove();
+					_this.mask.remove();
+					_this.defaults.onConfirm();
+				});
+			});
+		}
+	});
+	/*
+	setting ==> {
+		tip : "错误",
+		times : false, // 自动消失的时间
+		position : "left", @param [left, top, right, bottom]
+		distance : {
+			x : 0,
+			y : 0	
+		} //调整距离的说， x轴和y轴的距离;
+	}
+	*/
+	function Tip( setting ,el) {
+		if(!(this instanceof Tip)) {
+			return new Tip( setting ,this.el );
+		};
+		this.el = el;
+		this.defaults = {
+			tip : "错误",
+			times : false,
+			position : "left",
+			distance : {
+				x : 0,
+				y : 0	
+			}
+		};
+		f.extend( true, this.defaults , setting );
+		this.initTip();
+	};
+	Tip.prototype = {
+		contructor : Tip,
+		initTip : function() {
+			this.wrap = f( f.prototype.CE("div") );
+			this.wrap.html( f.template( this.getContent(), this.defaults) );
+			this.show();
+			this.defaults.times&&this.timeout();
+			this.defaults.position&&this.position();
+		},
+		getContent : function() {
+			return '<div class="smallTip-body"> \
+				<div class="samllTip-wraper"> \
+					<div class="smallTip-arrow-left"></div> \
+					<div class="smallTip-arrow-top"></div> \
+					<div class="smallTip-arrow-right"></div> \
+					<div class="smallTip-arrow-bottom"></div> \
+					<div class="smallTip-inner blue"> \
+						<div class="smallTip-content blue"> \
+							<p class="blue"><% this.tip %></p> \
+						</div> \
+					</div> \
+				</div> \
+			</div>';
+		},
+		show : function() {
+			var _this = this;	
+			f(this.el[0]).addClass("samllTip-parent");
+			this.div = f(".smallTip-body",this.wrap.el[0]);
+			f(this.el[0]).append( this.div );
+		},
+		position : function() {
+			var _this = this;
+			var position = {
+				"left" : "right",
+				"right" : "left",
+				"bottom" : "top",
+				"top" : "bottom"
+			};
+			f(".smallTip-arrow-"+ position[ this.defaults.position ],this.div.el[0]).css("display","block");
+			switch( this.defaults.position ) {
+				case "left" :
+					this.div.css( "top",parseInt( f(this.el[0]).css("height") )/-2 + this.defaults.distance.x);
+					this.div.css("left",parseInt( -parseInt( f(this.div).css("width") )-6 + this.defaults.distance.y ));
+				break;
+				case "top" :
+					this.div.css( "top",-parseInt( f(this.div).css("height") + this.defaults.distance.x ));
+					this.div.css("left",parseInt( parseInt( f(this.el[0]).css("width") )/2 + this.defaults.distance.y  ));
+				break;
+				case "right" :
+					this.div.css( "top",parseInt( f(this.el[0]).css("height") + this.defaults.distance.x )/-2);
+					this.div.css("left",parseInt( parseInt( f(this.el[0]).css("width") )+10+ this.defaults.distance.y  ));
+				break;
+				case "bottom" :
+					this.div.css("left", parseInt( parseInt( f(this.el[0]).css("width") )/2  + this.defaults.x));	
+					this.div.css("bottom", -parseInt( f(this.div).css("height"))+ this.defaults.distance.y  );
+				break;
+			};
+		},
+		timeout : function() {
+			var _this = this;
+			setTimeout(function(){
+				f(_this.div).remove();
+			},2000);
+		}
+	};
+	
+	var Accordion = function(setting, el) {
+		if(!(this instanceof Accordion)) {
+			return new Accordion( setting ,this.el );
+		};
+		this.el = el;
+		this.defaults = {
+			"event" : "click",
+			"singalHeight" : 100,
+			"time" : 1,
+		};
+		setting = setting || {};
+		this.h4 = f("h4",this.el[0]);
+		this.div = f("div",this.el[0]);
+		
+		f.extend(true, this.defaults, setting);
+		this.initAccordion();
+	};
+	Accordion.prototype = {
+		contructor : Accordion,
+		initAccordion : function() {
+			this.initEV();
+		},
+		initEV : function() {
+			var _this = this;
+			f.each( _this.h4.el ,function(e,i){
+				f(e).bind2(_this.defaults.event,function(ev){
+					_this.hideAll();
+					var div = f(ev.target || ev.srcElement).next();
+					f.move(div,_this.defaults.time,{
+						height : _this.defaults.singalHeight
+					});
+				},false);
+			});
+		},
+		hideAll : function() {
+			var _this = this;
+			f.each( this.div.el ,function(e,i){
+				f(e).css("height","0");
+			});
+		},
+		setHeight : function( val ) {
+			f(this.el[0]).css("height", val);
+		},
+		setWidth : function( val ) {
+			f(this.el[0]).css("width", val);
+		}
+	};
 	f.extend(true,f.prototype, {
 		Dragable : Dragable,
 		Resize : Resize,
 		Dialog : Dialog,
+		Tip : Tip,
 		Accordion : Accordion,
 		Button : Button,
 		Menu : Menu,
@@ -1493,7 +1889,8 @@ f.extend(true,f,{
 		Slide : Slide,
 		Spinner : Spinner,
 		Tabs : Tabs,
-		Tooltip : Tooltip
+		scrollPlugin : scrollPlugin,
+		loader : loader
 	});
 })();
 /*
@@ -1557,7 +1954,6 @@ r.join('');
 */
 //new Function("return 'my eye is three times biger then you '+ for(var i=0; i<3; i++) {+' 111 '+ } +' end' " );
 //'my eye is three times biger then you '+ for(var i=0; i<3; i++) {+' 111 '+ } +' end' 
-
 //DOMReady
 f.ready = (function( win , doc ) {
 	
@@ -1586,26 +1982,6 @@ f.ready = (function( win , doc ) {
 })(window, document);
 
 
-function CE( tag ,attr ) {
-	var el = document.createElement(tag);
-	if(attr) {
-		switch( typeof attr ) {
-			case "object" : 
-				for(var p in attr) {
-					el.setAttribute( p , attr[p] );
-					if( p === "style") {
-						el.style = attr[p];
-					};
-					if( p === "class" ) {
-						el.className = attr[p];
-					};
-				};
-				
-			break;
-		};
-	};
-	return el;
-};
 
 function getHref( href ) {
 	var aLink = CE("a", {href : href});
@@ -1713,5 +2089,6 @@ function isPhoneNumber(temp) {
 };
 
 f(function(){
-	l( f("#div2") );
+	//l( f("#div2") );
+	f.loadCss("style\\ui.css")
 });
