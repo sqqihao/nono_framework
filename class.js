@@ -612,6 +612,18 @@ f.extend(true, f.prototype,{
 		return f(el);
 	},
 
+    is : function() {
+
+    },
+
+    nextAll : function( selector ) {
+
+    },
+
+    prevAll : function() {
+
+    },
+
 	prev : function() {
 		var el = this.first();
 		while( el = el.previousSibling  ) {
@@ -927,6 +939,7 @@ f.extend(true,f,{
 		var C = function() {
 			this.init&&this.init.apply(this, arguments)
 		};
+
 		C.extend = function( obj ) {
 			if( isFn( obj ) ) {
 				noop.prototype = obj
@@ -1124,13 +1137,13 @@ f.extend(true, f,{
 			}
 		});
 		return result.concat([]);
-	},
-	unique : function( arr ) {
-		var result = [];
-		f.each(arr, function(a , index) {
-			if(arr.indexOf( a ) === index ) {
-				result.push( a );
-			}
+            },
+            unique : function( arr ) {
+            var result = [];
+            f.each(arr, function(a , index) {
+                if(arr.indexOf( a ) === index ) {
+                    result.push( a );
+                }
 		});
 		return result;
 	},
@@ -1144,7 +1157,7 @@ f.extend(true, f,{
 		return result;
 	},
 	intersection : function(arr) {
-		var result = []
+		var result = [];
 		var arr2 = (Array.prototype.slice.call(arguments,1)).shift();
 		return f.filter(arr.concat([]), function(a){
 			return arr2.indexOf( a ) !== -1;
@@ -1300,7 +1313,6 @@ f.extend(true, f,{
 		}
 	}
 });
-setTimeout("console.clear()",1);
 //JSON.Parse方法，这个方法不靠谱;
 f.extend(true,f,{
 	parseJSON : function(str) {
@@ -1508,6 +1520,11 @@ f.extend(true,f,{
 		};
 	}
 });
+
+/*
+var S = function() {};
+f.extend(true, S.prototype, f.extend__proto__( {publish : f.publish} ), f.extend__proto__( {subscribe : f.subscribe} ), f.extend__proto__( {deleteSubscribe : f.deleteSubscribe} ));
+*/
 
 /*
 data = {
