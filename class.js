@@ -615,7 +615,7 @@ f.extend(true, f.prototype,{
     closest : function() {
 
     },
-    
+
     is : function() {
 
     },
@@ -635,6 +635,10 @@ f.extend(true, f.prototype,{
 		};
 		return f(el);
 	},
+
+    parents : function() {
+
+    },
 
 	children : function( index ) {
 		var els = "";
@@ -686,6 +690,33 @@ f.extend(true, f.prototype,{
 			obj = obj.parentNode;
 		};
 	}
+});
+
+f.extend(true, f.prototype,{
+    scrollTop : function() {
+
+    },
+    scrollLeft : function() {
+
+    },
+    pageX : function() {
+
+    },
+    pageY : function() {
+
+    }
+});
+
+f.extend(true, f.prototype,{
+    show : function() {
+
+    },
+    hide : function() {
+
+    },
+    toggle : function() {
+
+    }
 });
 
 //事件模块;DOM1;
