@@ -12,11 +12,17 @@ var f = function(str, context) {
 f.map = function( arg ,fn ) {	
 	var result = [];
 	var type =  Object.prototype.toString.call(arg).slice(8,-1).toLowerCase();
+    if( arg instanceof f ) {
+        for(var i=0; i<arg.length; i++) {
+            if(fn)result.psush( fn( arg[i] , Number(i) ));
+        };
+        return
+    };
 	for(var index in arg) {
 		if( type === "object" ) {
 			if(fn)result.push( fn( index, arg[index] ) );
 			if(!fn)result.push(arg[index]);
-		}else if( type === "array"&&(Number(index)) === (Number(index)) ) {
+		}else if( type === "array"&&(Number(index)) === (Number(index)) || arg instanceof f ) {
 			if(fn)result.push( fn( arg[index] ) );
 			if(!fn)result.push(arg[index]);
 		}
@@ -26,8 +32,14 @@ f.map = function( arg ,fn ) {
 //for in 循环里面的key 一直是字符串,for in 循环数组的时候要注意 
 f.each = function( arg ,fn) {
 	var type =  Object.prototype.toString.call(arg).slice(8,-1).toLowerCase();
+    if( arg instanceof f ) {
+        for(var i=0; i<arg.length; i++) {
+            fn( arg[i] , Number(i) );
+        };
+        return
+    };
 	for(var index in arg) {
-		if ( type === "array"&&(Number(index)) === (Number(index)) ) {
+		if ( type === "array"&&(Number(index)) === (Number(index))  ) {
 			fn( arg[index] , Number(index) );
 		}else if( type === "object" ) {
 			fn( index, arg[index] );
@@ -69,6 +81,7 @@ f.proxy = function(fn, context) {
 		fn.apply(context, arg.concat( argInner ));
 	};
 };
+
 /*
 * param :第一个参数可以为布尔值，表示覆盖目标值， 第二个参数为目标对象， 第三个参数开始起为要继承的对象整个列表;
 */
@@ -100,91 +113,172 @@ f.extend = function() {
 	};
 	return target;
 };
+
+f.extend(true,f,{
+    extend__proto__ : function( prototype ) {
+        var Fn = function() {};
+        Fn.prototype = prototype;
+        return new Fn;
+    }
+});
+//基础数组的原型;
+f.prototype = f.extend__proto__(Array.prototype);
+
 f.readyList = [];
-f.prototype = {
+//debugger;
+var regFrag = /^\s*<(\w+|!)[^>]*>/;
+//正则; \1
+var regFullFrag =  /^\s*<(\w+|!)[^>]*>\w+<\/\1>/ ;
+var singleTagRE = /^<(\w+)\s*\/?>(?:<\/\1>|)$/;
+f.extend(f.prototype, {
 	i : function(str,context) {
 		if(typeof str === "function") {
 			f.readyList.push( str );
 			return this;
 		};
 		if( str instanceof f ) {
-			return str;
+            var eEl = str
+			return this;
 		};
 		
 		if( str.nodeType && str.nodeType === 9){
-			this.el = [str];
-			return;
+            this.push( str )
+			return this;
 		};
 		
 		if( str.top && str.self && str.window ) {
-			this.el = [str];
-			return;
+            this.push( str )
+			return this;
 		};
 		
 		if( !context ) context = document;
 		
 		if(str.nodeType===1) {
-			this.el = [str];
-			return ;
+            var el = str;
+			this.push( el );
+			return this;
 		};
+        //如果是单标签;
+        if( str.match( singleTagRE ) ) {
+            if( RegExp.$1 ) {
+                var dom = document.createElement( RegExp.$1 );
+                if(typeof context === "object" && context.nodeType !== 9) {
+                    var attr = context;
+
+                    var attrHook = {
+                        style : function( val) {
+                            //debugger
+                            f(this).style( val );
+                        },
+                        "class" : function( val ) {
+                            //debugger;
+                            f(this).addClass( val );
+                        },
+                        html : function(val) {
+                            f(this).html(val);
+                        }
+                    };
+
+                    for(var p in attr) {
+                        //debugger;
+                        if( attrHook[p] !== void 0 ) {
+                            attrHook[p].call(dom,attr[p] );
+                        }else{
+                            dom.setAttribute( p , attr[p] );
+                        };
+                    };
+                };
+                this.push( dom )
+                return this;
+            };
+        };
+        //如果是全标签;
+        if( str.match(regFullFrag) ) {
+            var dom = f("<div>");
+            dom[0].innerHTML = str;
+            dom = dom[0].children[0];
+            if(dom) {
+                this.push(dom);
+                return this;
+            };
+        };
+
 		if(str.indexOf("#")==0) {
-			this.el = [ context.getElementById( str.substring(1) ) ];
+			this.push( context.getElementById( str.substring(1) ) );
 		}else if(str.indexOf("\.")===0) {
 			if( context.getElementsByClassName ) {
 				//this.el = Array.prototype.concat.call( document.getElementsByClassName( str.substring(1) ) ,[]);
-				this.el = f.toArray( context.getElementsByClassName( str.substring(1) ) );
+                //debugger;
+                var arr = f.toArray( context.getElementsByClassName( str.substring(1) )),
+                    len = arr.length,
+                    i = 0;
+                do{
+                    this.push( arr[i] );
+                }while( i++, i<len )
+				//this.push( Array.prototype.concat.call([]) );
+                return this;
 			}else{
+                //debugger;
 				var className = str.substring(1),
-					result = [],
+					//result = [],
 					regClass = new RegExp("\\b"+className+"\\b","gi");
 				var allEl = context.getElementsByTagName("*");
 				for(var i = 0, len = allEl.length; i < len ; i++) {
 					var selectorEl = allEl[i];
-					selectorEl.className.search(regClass) !== -1 && result.push( selectorEl );
+					selectorEl.className.search(regClass) !== -1 && this.push( selectorEl );
 				};
-				this.el = f.toArray( result );
+                return this;
+				//this.el = f.toArray( result );
 				//this.el = [ this.allClass( str.substring(1) ) ];
 			}
 		}else{
-			this.el = f.toArray( context.getElementsByTagName(str) );
+            var arr =  f.toArray( context.getElementsByTagName(str) ),
+                len = arr.length,
+                i = 0;
+            do{
+                this.push( arr[i] );
+            }while( i++, i<len )
+            //this.push( Array.prototype.concat.call([]) );
+            //debugger;
+            return this;
 		};
 	},
 	size : function() {
-		return this.el.length;
+		return this.length;
 	},
 	noop : function() {
 		
 	},
 	map : function( fn ) {
-		this.el = f.map(this.el, fn);
+        //这个map没了;
+		this.el = f.map(this, fn);
 	},
 	each : function( fn ) {
 		var i = 0,
-			len = this.el.length;
+			len = this.length;
 		for(; i<len; i++) {
-			fn.apply(this.el[i], [i, this.el[i]]);
+			fn.apply(this[i], [i, this[i]]);
 		};
 		return this;
 	},
-	reverseEach : function() {
-		var len = this.el.length;
+	reverseEach : function( fn ) {
+		var len = this.length;
 		while( --len ) {
-			fn.call(this.el[len], len, this.el[len])
+			fn.call(this[len], len, this[len])
 		};
 		return this;
 	},
 	first : function() {
-		return this.el[0];
+		return this[0];
 	},
 	last : function() {
-		return this.el[ this.size()-1 ];
+		return this[ this.size()-1 ];
 	},
 	eq : function(num) {
-		if(num<0)num+=this.el.length;
-		return this.el[num];
+		if(num<0)num+=this.length;
+		return this[num];
 	},
 	"class" : function() {
-		console.log( this );
 		return this.first().className;
 	},
 	hasClass : function(arg) {
@@ -229,8 +323,7 @@ f.prototype = {
 			}
 		});
 	}
-	
-};
+});
 
 var proto = f.prototype.i.prototype = f.prototype;
 f.extend(true,f,{
@@ -269,18 +362,29 @@ f.extend(true,f,{
 	//setCookie
 	//({name : "nono"} , 1)
 	sc : function(  ) {
-		var arg = Array.prototype.slice.call(arguments),
-			temp = "";
+		var arg = Array.prototype.slice.call(arguments);
+        if( typeof arg[1] !== "number" ) {
+            //如果没给时间就是一天;
+            arg[1] = new Date( new Date().getTime()+86400*1000 );
+        };
 			//传JSON或者字符串只会接受第一个cookie，我要看看是为什么;
-		if(typeof arg[0] === "object" && typeof arg[1]=== "number") {
+		if(typeof arg[0] === "object") {
 			for(var p in arg[0]) {
+                var temp = "";
 				temp += (p+"="+arg[0][p]+"; ");
+                document.cookie = (temp + "; expires=" + new Date(new Date().getTime()+(arg[1]*3600*1000)).toGMTString());
 			};
-			document.cookie = (temp + "; expires=" + new Date(new Date().getTime()+(arg[1]*3600*1000)).toGMTString());
+
 			return f.ck();
 		};
-		if(typeof arg[0] === "string" && typeof arg[1]=== "number") {
-			document.cookie = (arg[0] + "; expires=" + new Date(new Date().getTime()+(arg[1]*3600*1000)).toGMTString());
+        //用这种写法总是出现就写了userID一个cookie;我感觉是我写的方式不对...
+        //document.cookie="userId=828; userName=hulk; expire="+new Date().toGMTString();
+		if(typeof arg[0] === "string") {
+            var arr = arg[0].split(";");
+            for(var i= 0, len = arr.length; i<len; i++) {
+                var cookieTemp = arr[i].split("=");
+                document.cookie = f.trim(cookieTemp[0])+"="+f.trim(cookieTemp[1]) + "; expires=" + new Date(new Date().getTime()+(arg[1]*3600*1000)).toGMTString();
+            };
 			return f.ck();
 		};
 	},
@@ -306,17 +410,23 @@ div1 = f("#div1");
 //属性模块
 f.extend(true,f.prototype,{
 	attr : function( name , val ) {
-		//设置;
-		if( val ) {
-			f.each(this.el,function(e){
-				e.setAttribute(name, val);
+		//设置;,有两种情况name有值，name是json的情况;
+        var isObj;
+		if( val  || (isObj = f.isObject( name ))) {
+			f.each(this,function(e){
+                if( val ) e.setAttribute(name, val);
+                if(isObj) {
+                    f.each(name,function( key,value ) {
+                        e.setAttribute(key, value);
+                    });
+                };
 			});
 			return this;
 		};
 		
 		//获取
 		var arr = [];
-		f.each(this.el,function(e){
+		f.each(this,function(e){
 			arr.push(e.getAttribute(name));
 		});
 		return arr.length === 1 ? arr[0] : arr;
@@ -328,7 +438,7 @@ f.extend(true,f.prototype,{
 	
 	removeAttr : function( name ) {
 		if( name ){
-			f.each(this.el, function(e) {
+			f.each(this, function(e) {
 				e.removeAttribute( name );
 			});
 			return this;
@@ -337,10 +447,26 @@ f.extend(true,f.prototype,{
 		//f.prototype.removeAttr.call(this)
 	},
 
+    style : function(val) {
+
+        if( val ){
+            f.each(this, function(e) {
+                //debugger;
+               if( typeof e.style.cssStyle !== void 0) {
+                   e.style.cssStyle = val;
+               };
+                if( typeof e.style.cssText !== void 0) {
+                   e.style.cssText = val;
+                };
+            });
+            return this;
+        };
+    },
+
 	//l( f("#div1").html(111111111) );
 	html : function(str) {
 		if(str) {
-			f.each(this.el,function(e){
+			f.each(this,function(e){
 				e.innerHTML = str;
 			});
 			return this;
@@ -349,8 +475,16 @@ f.extend(true,f.prototype,{
 		return this.first().innerHTML;
 	},
 	
-	text : function() {
-		
+	text : function( str ) {
+        if(str) {
+            f.each(this,function(e){
+                e.textContent && (e.textContent = str);
+                e.innerText && (e.innerText = str)
+            });
+            return this;
+        };
+        //获取第一个
+        return this.first().textContent || this.first().innerText;
 	}
 });
 
@@ -361,23 +495,37 @@ f.camelize = function( arg ) {
 f.extend(true,f.prototype,{
 	css : function(key,val) {
 		var el = this.first();
-		var key = f.camelize(key);
 		var result = "";
-		if(!val) {
-			//有问题
-			//if( el.style[key] ) result = el.style[key];
-			if( window.getComputedStyle ) result = window.getComputedStyle(el,false)[key];
-			if( el.currentStyle ) result = el.currentStyle[key];
-			//NaN or AUTO;
-			if(result !== result || result === "auto" ){
-				return 0;
-			};
-			return result;
-		}else{
-			if(typeof val === "number")val += "px";
-			el.style[key] = val;
-		};
-		return this;
+        var setStyle = function(key,val) {
+            if(typeof val === "number")val += "px";
+            el.style[key] = val;
+            return this;
+        };
+
+        //Object;
+        //debugger;
+        if( f.isObject( key) ) {
+            f.each(key, function(k,v) {
+                //debugger;
+                setStyle(k,v);
+            });
+            return this;
+        }if(val !== void 0 ){
+            setStyle(key,val);
+            return this;
+        }else{
+            //如果是读取style;，现在就只有读取样式的情况了;
+            var key = f.camelize(key);
+            //有问题
+            //if( el.style[key] ) result = el.style[key];
+            if( window.getComputedStyle ) result = window.getComputedStyle(el,false)[key];
+            if( el.currentStyle ) result = el.currentStyle[key];
+            //NaN or AUTO;
+            if(result !== result || result === "auto" ){
+                return 0;
+            };
+            return result
+        };
 	}
 });
 
@@ -387,7 +535,7 @@ f.cache = {};
 
 f.extend(true,f.prototype,{
 	data : function( key, val ) {
-		var el = this.el[0];
+		var el = this[0];
 		el.uuid = el.uuid || ++f.uuid;
 		var datas = f.cache[ el.uuid ] = f.cache[ el.uuid ] || {};
 		if( val ) {
@@ -413,28 +561,10 @@ f.extend(true,f.prototype,{
 var i = f("#ipt1");
 var div1 = f("#div1");
 //DOM节点操作模块;
-f.extend(true,f.prototype,{
-	CE : function( tag , attr) {
-		var el = document.createElement(tag);
-		if(attr) {
-			switch( typeof attr ) {
-				case "object" : 
-					for(var p in attr) {
-						el.setAttribute( p , attr[p] );
-						if( p === "style") {
-							el.style = attr[p];
-						};
-						if( p === "class" ) {
-							el.className = attr[p];
-						};
-					};
-					
-				break;
-			};
-		};
-		return el;
-	},
+f.extend(true, f.prototype,{
+
 	append : function( target ) {
+        //debugger;
 		if( typeof target == "object" && target.nodeType === 1 ) {
 			this.first().appendChild( target );
 		}else if(target instanceof f){
@@ -442,6 +572,7 @@ f.extend(true,f.prototype,{
 		};
 		return this;
 	},
+
 	insertBefore : function( target ) {
 		var parent = this.first().parentNode;
 		if( typeof target == "object" && target.nodeType === 1 ) {
@@ -451,6 +582,7 @@ f.extend(true,f.prototype,{
 		};
 		return this;
 	},
+
 	after : function( target ) {
 		var parent = this.first().parentNode;
 		if( typeof target == "object" && target.nodeType === 1 ) {
@@ -459,11 +591,19 @@ f.extend(true,f.prototype,{
 			parent.insertBefore(target.first(), this.next().first());
 		};
 	},
+
+    prePend : function( target ) {
+        //debugger;
+        var _this = this.first().children[0];
+        f(_this).insertBefore( target );
+    },
+
 	remove : function() {
 		f.each(this.el, function(el , index) {
 			el.parentNode.removeChild( el );
 		});
 	},
+
 	next : function() {
 		var el = this.first();
 		while( el = el.nextSibling  ) {
@@ -471,6 +611,7 @@ f.extend(true,f.prototype,{
 		};
 		return f(el);
 	},
+
 	prev : function() {
 		var el = this.first();
 		while( el = el.previousSibling  ) {
@@ -478,17 +619,26 @@ f.extend(true,f.prototype,{
 		};
 		return f(el);
 	},
-	children : function() {
+
+	children : function( index ) {
 		var els = "";
 		//children不标准，但是全兼容哦;
-		if( els = this.first().children ){
-			return els;
-		};
+        if(index === void 0){
+            if( els = this.first().children ){
+                return els;
+            };
+        };
+
+        if( isFinite(index) ) {
+            return this.first().children[index];
+        };
 	},
+
 	parent : function() {
 		var obj = this.first().parentNode;
 		return obj ? f(obj) : document;
 	},
+
 	wrap : function( obj ,attr ) {
 		if( typeof obj === "string" && typeof attr === "object" ) {
 			var target = f(CE(obj, attr));
@@ -498,6 +648,7 @@ f.extend(true,f.prototype,{
 		this.parent().append( target );
 		target.append( this.first() );
 	},
+
 	clone : function( b ) {
 		if( typeof b === "boolean" ) {
 			if(b) {
@@ -507,6 +658,7 @@ f.extend(true,f.prototype,{
 			};
 		};
 	},
+
 	contain : function( obj ) {
 		var parent, 
 			obj = (typeof obj === f) ? f.first() : obj&&obj.nodeType === 1 ? obj : "",
@@ -523,7 +675,7 @@ f.extend(true,f.prototype,{
 //事件模块;DOM1;
 f.extend(true,f.prototype,{
 	bind : function( type, fn ) {
-		f.each(this.el,function(e){
+		f.each(this,function(e){
 			var events = e.events = e.events || {};
 			events[type] = events[type] || [];
 			//如果刚开始有绑定事件的话就走这个
@@ -531,11 +683,9 @@ f.extend(true,f.prototype,{
 				events[0] = e["on"+type];
 			};
 			
-			e["on"+type] = (function() {
-				return function(ev) {
-					f.prototype.trigger.call(e,ev,type);
-				};
-			})();
+			e["on"+type] =  function(ev) {
+                f.prototype.trigger.call(e,ev,type);
+            };
 			
 			events[type].push( fn );
 		});
@@ -543,24 +693,24 @@ f.extend(true,f.prototype,{
 	},
 	
 	trigger : function( ev, type ) {
-		l(arguments);
+		//l(arguments);
 		//走这边说明是手动触发的;
 		if( typeof ev !== "object" ) {
 			type = ev;
 			ev = "";
-			this.trigger.call(this.first() ,{} , type)
+			this.trigger.call(this.first() ,{} , type);
 		};
 		
 		var events = this.events = this.events || {};
 		events[type] = events[type] || [];
 		for(var i=0, len = events[type].length, fns = events[type]; i<len; i++) {
-			fns[i](ev);
+			fns[i].call(this,ev);
 		}; 
 	},
 	
 	removeBind : function(type) {
 		if(typeof type === "string") {
-			f.each(this.el,function(e){
+			f.each(this,function(e){
 				var events = e.events = e.events || {};
 				events[type] = events[type] || [];
 				//直接清空事件的列表;
@@ -568,7 +718,7 @@ f.extend(true,f.prototype,{
 			});
 		};
 		if(typeof type === "function") {
-			f.each(this.el,function(e){
+			f.each(this,function(e){
 				var events = e.events = e.events || {};
 				//循环事件列表
 				for(var p in events) {
@@ -611,6 +761,7 @@ f.extend(true,f.prototype,{
 		};
 	}
 });
+
 //shadow_box,返回沙盒的 doc和 win;
 f.extend(true,f,{
 	shadow : function( fn ) {
@@ -1406,14 +1557,6 @@ f.extend(true,f,{
 	}
 });
 
-f.extend(true,f,{
-	extend__proto__ : function( prototype ) {
-		var Fn = function() {};
-		Fn.prototype = prototype;
-		return new Fn;
-	}
-});
-
 (function() {
 	var Button = function() {
 	};
@@ -2090,5 +2233,5 @@ function isPhoneNumber(temp) {
 
 f(function(){
 	//l( f("#div2") );
-	f.loadCss("style\\ui.css")
+	//f.loadCss("style\\ui.css")
 });
