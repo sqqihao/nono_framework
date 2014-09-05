@@ -612,6 +612,10 @@ f.extend(true, f.prototype,{
 		return f(el);
 	},
 
+    closest : function() {
+
+    },
+    
     is : function() {
 
     },
