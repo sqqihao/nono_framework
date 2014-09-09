@@ -6,6 +6,8 @@ var $ = function(arg) {
 l = function(arg) {
 	console&&console.log(arg);
 };
+var _f = window.f;
+var _$ = window.$;
 var f = function(str, context) {
 	return new f.prototype.i( str ,context );
 };
@@ -82,8 +84,11 @@ f.proxy = function(fn, context) {
 	};
 };
 
+
+//typeof undefined === "undefined" ，typeof返回的是字符串的;
+//void 0就是undefined类型，不是字符串类型;
 /*
-* param :第一个参数可以为布尔值，表示覆盖目标值， 第二个参数为目标对象， 第三个参数开始起为要继承的对象整个列表;
+* pram :第一个参数可以为布尔值，表示覆盖目标值， 第二个参数为目标对象， 第三个参数开始起为要继承的对象整个列表;
 */
 f.extend = function() {
 	var arg = Array.prototype.slice.call( arguments ),
@@ -97,28 +102,227 @@ f.extend = function() {
 	for(; i< arg.length; i++) {
 		var source = arg[i];
 		for(var prop in source) {
+            /*
 			if( typeof source[prop] === "object" ) {
-				f.extend(reW , target , source[prop])
+                target[prop] = target[prop] || {};
+				f.extend(reW , target[prop] , source[prop])
 			};
+			*/
+            //如果不存在值就直接复制
 			if( target[prop] === undefined ) {
 				target[prop] = source[prop];
 			}else{
-				if(reW) {
-					target[prop] = source[prop]
-				}else{
-					//rew为假的时候就不复写了
-				};
+                //debugger;
+                //如果存在值并且是对象，那么就走迭代
+                if( typeof source[prop] === "object" ) {
+                    f.extend(reW , target[prop] , source[prop])
+                }else{
+                    //如果有目标有存在这个key，而且有复写的设置，就重新复写；但是有种情况是深沉迭代就在之前先判断一下;
+                    if( reW ) {
+                        target[prop] = source[prop];
+                    };
+                };
 			};
 		};
 	};
 	return target;
 };
-
+//工具方法；
 f.extend(true,f,{
     extend__proto__ : function( prototype ) {
         var Fn = function() {};
         Fn.prototype = prototype;
         return new Fn;
+    },
+
+    parseHTML : function( data ,context ,script ) {
+        if( !data ) return ;
+        context = context || document;
+        if( data.match( singleTagRE ) ) {
+            return document.createElement( RegExp.$1 );
+        };
+        script = script || true;
+        //这要要写很多的，我就简单哗啦...
+        //匹配所有的闭合标签和单标签添加到新建一个元素；并返回这个元素的children或者childnodes;
+        //利用exec这个正则同一个正则匹配的同一个字符串递增返回的特性;，把脚本保存起来，直接eval;
+        var regScript = /<script>([^<]+)<\/script>/g,
+            evalStr = "";
+        while( regScript.exec(data) ) {
+            evalStr  +=  ";" +RegExp.$1;
+        };
+        var oDiv = document.createElement("div");
+        oDiv.innerHTML = data.replace(regScript,"");
+        return {
+            nodes : oDiv.children,
+            scirpt : evalStr
+        }
+    },
+
+    parseJSON : function( data ) {
+        if( !data || typeof data !== "string ")
+            return;
+        data = f.trim( data );
+        if( window.JSON && window.JSON.parse(data) ) {
+            return window.JSON.parse( data );
+        };
+        return new Function("return "+data )();
+    },
+
+    global : function( data ) {
+        var globalE = eval;
+        ( window.execScript || function(data) {
+            globalE.call(window, data);
+        })(data)
+    },
+
+    inArray : function(arg, list, index) {
+        return list.indexOf(arg, index) !== -1;
+    },
+    //f.Callbacks("once memory returnOnFalse");
+    Callbacks : function( options ) {
+        var regWhilteSpace = /\S+/gi; ///\S+?/gi  ==>>问号?代表{0,1}；
+        function createOptions( str ) {
+            var result = {};
+            f.each( str.match( regWhilteSpace ) ,function (e){
+                result[e] = true;
+            })
+            return result;
+        };
+        options = typeof options === "string" ? createOptions( options ) : {};
+        var list = new Array(),
+            fired = false,
+            fireStart = 0,
+            result;
+        var fire = function( args ) {
+            fired = true;
+            for(var i = fireStart, len = list.length; i < len ; i++) {
+                //debugger;
+                try{
+                    result = list[i].call( null,result,args );
+                }catch(e) {
+                    result = e;
+                }
+                if( result instanceof Error ) {
+                    return {
+                        error : result,
+                        index : i
+                    }
+                };
+                if( result === false && options.returnOnFalse ) break;
+            };
+            return result;
+        };
+        return {
+            list : list,
+            fireStart : function(start) {
+                fireStart = start;
+            },
+            add : function( fns ) {
+                var _self = this;
+                var fn;
+                if( typeof fns === "function" ) {
+                    fn = fns;
+                    list.push( fn );
+                };
+                if( f.isArray( fns ) ) {
+                    f.each(fns, function( _fn ) {
+                        _self.add( _fn )
+                    });
+                };
+                if( fired && options.memory ) {
+                    this.fire( result );
+                };
+                return this;
+            },
+            remove : function( fn ) {
+                if( typeof fn !== "function" ) return;
+                f.each( list, function( _fn, index ) {
+                    if( fn === _fn ) {
+                        list.splice(index, 1);
+                    };
+                });
+            },
+            fire : function() {
+                if(options.once === true && fired) {
+                    return;
+                };
+                var args = Array.prototype.slice.call( arguments );
+                return fire.call(null ,args);
+            }
+        };
+    },
+    //这个是使用Callbacks为基础的延迟对象;
+    CbDeferred : function() {
+        var d = f.Callbacks("once memory"),
+            fa = f.Callbacks("once memory"),
+            p = f.Callbacks("memory");
+            var result = {
+                index : 0,
+                error : 0
+            };
+        var Deferred = {
+            resolve : f.proxy(function() {
+                state = "resolved";
+                d.fireStart( result.index );
+                result = d.fire();
+                if( result && result.error instanceof  Error ) {
+                    result = result;
+                    Deferred.reject();
+                }
+            },null),
+            reject : f.proxy(function() {
+                state = "rejected";
+                fa.fireStart( result.index );
+                rersult = fa.fire();
+            },null),
+            notify : p.fire
+        };
+
+        var state = "pending";
+
+        var promise = {
+            state : function() {
+                return state;
+            },
+            promise : function() {
+                return promise;
+            },
+            done : d.add,
+            fail : fa.add,
+            progress : p.add,
+            always: function() {
+                promise.done( arguments );
+                promise.fail( arguments );
+            }
+        };
+
+        f.extend(Deferred, promise);
+        return Deferred;
+    },
+    CbWhen : function() {
+        var arg = Array.prototype.slice.call( arguments );
+        var dfd = f.CbDeferred();
+        var values = [];
+        var testDfdDone = function() {
+            dfdLen--;
+            if( !dfdLen ) {
+                dfd.resolve();
+            };
+        };
+        var dfdLen = 0;
+        f.each(arg , function( e ) {
+            if( e.resolve && e.reject ) {
+                dfdLen++;
+                e.done(function(arg) {
+                    values.push(arg);
+                    testDfdDone();
+                });
+                e.fail(function() {
+                    dfd.reject();
+                });
+            };
+        });
+        return dfd;
     }
 });
 //基础数组的原型;
@@ -129,16 +333,21 @@ f.readyList = [];
 var regFrag = /^\s*<(\w+|!)[^>]*>/;
 //正则; \1
 var regFullFrag =  /^\s*<(\w+|!)[^>]*>\w+<\/\1>/ ;
+// ?:这个表示非子项，不再mathch中显示出来;
 var singleTagRE = /^<(\w+)\s*\/?>(?:<\/\1>|)$/;
+//实例化和基本的实例方法扩充;
 f.extend(f.prototype, {
 	i : function(str,context) {
+        if( !str ) {
+            return null
+        };
 		if(typeof str === "function") {
 			f.readyList.push( str );
 			return this;
 		};
 		if( str instanceof f ) {
             var eEl = str
-			return this;
+			return this[0] = eEl;
 		};
 		
 		if( str.nodeType && str.nodeType === 9){
@@ -251,7 +460,7 @@ f.extend(f.prototype, {
 	},
 	map : function( fn ) {
         //这个map没了;
-		this.el = f.map(this, fn);
+        f.extend( this, f.map(this, fn) );
 	},
 	each : function( fn ) {
 		var i = 0,
@@ -518,7 +727,7 @@ f.extend(true,f.prototype,{
             var key = f.camelize(key);
             //有问题
             //if( el.style[key] ) result = el.style[key];
-            if( window.getComputedStyle ) result = window.getComputedStyle(el,false)[key];
+            if( window.getComputedStyle ) result = el.ownerDocument.defaultView.getComputedStyle(el,false)[key];
             if( el.currentStyle ) result = el.currentStyle[key];
             //NaN or AUTO;
             if(result !== result || result === "auto" ){
@@ -612,20 +821,54 @@ f.extend(true, f.prototype,{
 		return f(el);
 	},
 
-    closest : function() {
+    "get" : function( index) {
+        if(index=== void 0) return Array.prototype.slice.call(this);
+        if( index<0 )index+=this.length;
+        return this[index];
+    },
+
+    match : function(selector) {
+        var eParent = f(this.get(0)).parent().get(0);
+        //debugger;
+        var index = Number();
+        //return (index = f(selector, eParent).indexOf( this.get(0) )) === -1 ? false : index;
+        return f(selector, eParent).indexOf( this.get(0) ) === -1 ? false : true;
 
     },
 
-    is : function() {
-
+    closest : function( selector ) {
+        var node = this[0];
+        while( (node = node.parentNode) && node.nodeType !== 9 ) {
+            if( f(node).match( selector ) ) {
+                return node;
+            };
+        };
     },
 
-    nextAll : function( selector ) {
+    is : function( selector ) {
+        //debugger;
+        var arrEl = f( selector ,f( this.first()).parent().first() );
+        if( arrEl.indexOf( this.first() ) === -1)return false;
+        return true;
+    },
 
+    nextAll : function() {
+        var node = this[0];
+        var parent = node.parentNode.children;
+        //slice是包含当前一个值的，所以要去掉 node；
+        return Array.prototype.slice.call(parent, Array.prototype.indexOf.call(parent,node)+1);
     },
 
     prevAll : function() {
-
+        var node = this[0];
+        var parent = node.parentNode.children;
+        //slice的最后一个参数的值就是你要切的元素位置，而且这个元素不算在内
+        //arr = [1, 2, 3, 4, 5, 6]
+        //arr.slice(0, arr.length ) ====>>>> [1, 2, 3, 4, 5, 6]
+        //arr.slice(5) ==>> [6]
+        // arr.slice(5,6) ==>> [6]
+        //arr.slice(0,5) ==>> [1, 2, 3, 4, 5]
+        return Array.prototype.slice.call(parent, 0, Array.prototype.indexOf.call(parent,node));
     },
 
 	prev : function() {
@@ -637,7 +880,15 @@ f.extend(true, f.prototype,{
 	},
 
     parents : function() {
-
+        var result = [];
+        var _this = this.first();
+        var parent;
+        //debugger;
+        while((parent = f(_this).parent()) && (parent.first().nodeType !== 9) ) {
+            result.push( parent[0] );
+            _this = parent;
+        }
+        return result;
     },
 
 	children : function( index ) {
@@ -707,15 +958,63 @@ f.extend(true, f.prototype,{
     }
 });
 
-f.extend(true, f.prototype,{
-    show : function() {
+//f._getDefaultsStyle("div","display") ==>> "block"
+//f._getDefaultsStyle("table","display") ==>> "table"
+//f._getDefaultsStyle("tr","display") ==>> "table-row"
+//f._getDefaultsStyle("td","display") ==>> "table-cell"
+//f._getDefaultsStyle("span","display") ==>> "inline"
+/*
+*         通过沙盒获取默认的值
+*/
+f.extend(true, f, {
+    _getDefaultsStyle :function( node ,key) {
+        var tag = ""
+        if( typeof node === "string" ) {
+            tag = node;
+        }else if(typeof node === "object" && node.nodeType && node.nodeType ===1) {
+            tag = node.nodeName.toLowerCase();
+        }else if( node instanceof f) {
+            return f.__getDefaultStyle( node[0] );
+        }else{
+            throw new TypeError;
+        };
+        var defaultV = "";
+        f.shadow(function(doc, win){
+            var eEl = f("<"+ tag + ">",doc);
+            //隐藏的元素没有display值，所以要把这个元素加到doc.body里面去;
+            f(doc.body).append( eEl );
+            defaultV = eEl.css( key )
+        });
+        return defaultV;
+    }
+});
 
+//shadow_box,返回沙盒的 doc和 win;
+f.extend(true,f,{
+    shadow : function( fn ) {
+        if( !this.eIfr ) {
+            var eIfr = f("<iframe>",{id:"shadow"});
+            f("body").append( eIfr );
+            this.eIfr = eIfr.get(0);
+        };
+        fn( this.eIfr.contentDocument ,this.eIfr.contentWindow || this.eIfr.contentDocument.window);
+    }
+});
+
+f.extend(true, f.prototype,{
+    hasShow : function() {
+        var defaultDisplay = f._getDefaultsStyle( this.first().nodeName.toLowerCase() || "div","display" );
+        return this.css("display") === defaultDisplay;
+    },
+    show : function() {
+        var defaultDisplay = f._getDefaultsStyle( this.first().nodeName.toLowerCase() || "div" , "display" );
+        this.css("display", defaultDisplay);
     },
     hide : function() {
-
+        this.css("display", "none");
     },
     toggle : function() {
-
+        f( this.first()).css("display" , f(this.first()).hasShow() ? "none" : f._getDefaultsStyle( this.first().nodeName.toLowerCase() || "div","display" ));
     }
 });
 
@@ -809,15 +1108,6 @@ f.extend(true,f.prototype,{
 	}
 });
 
-//shadow_box,返回沙盒的 doc和 win;
-f.extend(true,f,{
-	shadow : function( fn ) {
-		var eIfr = CE("iframe");
-		f("body").append( eIfr );
-		f( eIfr.contentDocument ,eIfr.contentWindow || eIfr.contentDocument.window);
-	}
-});
-
 //exec和test
 //ua嗅探
 f.extend(true,f,{
@@ -837,7 +1127,11 @@ f.extend(true,f,{
 	prefix : function( node, name ) {
 		if( node instanceof f ) node = node.first();
 		//camelize
-		var namePre = ["-webkit-","-moz-","-ms","-o",""],
+        //样式的遵循是一致的;
+        //xx.style.webkitTransform;
+        //xx.style.msTransform;
+        //window下有些类是Webkit大写开头的
+		var namePre = ["-webkit-","webkit-","-moz-","moz-","-ms-","o-",""],
 			i = 0;
 		do{
 			if( f.camelize( namePre[i]+name ) in node ) {
@@ -1609,6 +1903,13 @@ f.extend(true,f,{
 	}
 });
 
+f.extend(true,f,{
+   confilict : function() {
+       window.f = _f;
+       window.$ = _$;
+       return f;
+   }
+});
 (function() {
 	var Button = function() {
 	};
