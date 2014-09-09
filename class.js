@@ -323,6 +323,21 @@ f.extend(true,f,{
             };
         });
         return dfd;
+    },
+    support : function() {
+        var fDiv = f("<div>");
+        fDiv.html("  <div><a href='sdf'></a></div>");
+        var a = f("a", fDiv[0])[0];
+        debugger;
+        a.get.style.cssText = "float:left";
+        return {
+            //IE8,7,6浏览器会自动trim头部和尾部的空格
+            leadingWhitespace : (fDiv.get(0).firstChild.nodeType === 3),
+            cssFloat : !!a.style.cssFloat,
+            //IE的怪异模式的document.compatMode    值为 BackCompat
+            boxModel :  document.compatMode === "CSS1Compat",
+            ajax : true
+        };
     }
 });
 //基础数组的原型;
@@ -1088,23 +1103,29 @@ f.extend(true,f.prototype,{
 //事件模块;DOM2;
 f.extend(true,f.prototype,{
 	bind2 : function(ev, fn, capture) {
-		capture = capture || false;
-		if( document.addEventListener ) {
-			this.el[0].addEventListener(ev, fn, false);
-		}else if( obj.attachEvent ) {
-			this.el[0].attachEvent("on"+ev , f.proxy(fn ,this.el[0]));
-		}else{
-			this.el[0]["on"+ev] = fn;
-		};
+        this.each(function(i,el) {
+            //capture = capture || false;
+            if( document.addEventListener ) {
+                el.addEventListener(ev, fn, false);
+            }else if( obj.attachEvent ) {
+                el.attachEvent("on"+ev , f.proxy(fn ,this.el[0]));
+            }else{
+                el["on"+ev] = fn;
+            };
+        });
 	},
 	unbind2 : function(ev, fn) {
-		if( document.addEventListener ) {
-			this.el[0].removeEventListener(ev, fn, false);
-		}else if( obj.attachEvent ) {
-			this.el[0].detachEvent("on"+ev , fn);
-		}else{
-			this.el[0]["on"+ev] = fn;
-		};
+
+        this.each(function(i, el) {
+            //capture = capture || false;
+            if( document.addEventListener ) {
+                el.removeEventListener(ev, fn, false);
+            }else if( obj.attachEvent ) {
+                el.detachEvent("on"+ev , fn);
+            }else{
+                el["on"+ev] = fn;
+            };
+        });
 	}
 });
 
@@ -1910,6 +1931,7 @@ f.extend(true,f,{
        return f;
    }
 });
+
 (function() {
 	var Button = function() {
 	};
@@ -1934,31 +1956,31 @@ f.extend(true,f,{
 	*new Dragable()
 	*{ range : { top : 100 ,left: 200, x : 0 , y : 0} }
 	*{ clientScreen : true }
+	*new Dragable({el : f("#div1").get(0)});
 	*/
 	var Dragable = function( setting ) {
-		/*
 		if( !(this instanceof Dragable)) {
 			return new Dragable( setting );
 		};
-		*/
-		var defaults = {
-			el : this || f(setting.el)
+        this.defaults = {
+			el : f(setting.el)
 		};
-		f.defaults(defaults ,setting);
-		this.defaults = defaults;
-		Dragable.prototype.init( defaults );
+		f.defaults( this.defaults  ,setting );
+		this.init();
 	};
+
 	Dragable.prototype = {
 		constructor : Dragable,
-		init : function( defaults ) {
-			this.setPosition( defaults.el );
-			this.ev( defaults );
+		init : function(  ) {
+			this.setPosition( this.defaults.el );
+			this.ev( this.defaults );
 		},
 		setPosition : function( el ) {
 			var posStatus;
-			if( (posStatus = el.css("position")) !== "relative" || posStatus !== "absolute" ) {
-				var l = el.css("left");
-				var t = el.css("top");
+			if( el.css("position") === "static" ) {
+                var lt = f.getOffset( el[0] );
+				var l = lt.x;
+				var t = lt.y;
 				var w = el.css("width");
 				var h = el.css("height");
 				
@@ -1984,8 +2006,8 @@ f.extend(true,f,{
 				if( defaults.clientScreen ) {
 					var xy = f.docClient();
 					var range = {
-						x : Math.max.apply(Math,[ xy.width-parseInt(f(el.el[0]).css("width")) - parseInt(f(el.el[0]).css("margin-left"))-parseInt(f(el.el[0]).css("margin-right")) ]),
-						y : Math.max.apply(Math,[ xy.height-parseInt(f(el.el[0]).css("height")) - parseInt(f(el.el[0]).css("margin-top")) - parseInt(f(el.el[0]).css("margin-bottom"))]),
+						x : Math.max.apply(Math,[ xy.width-parseInt(f(el).css("width")) - parseInt(f(el).css("margin-left"))-parseInt(f(el).css("margin-right")) ]),
+						y : Math.max.apply(Math,[ xy.height-parseInt(f(el).css("height")) - parseInt(f(el).css("margin-top")) - parseInt(f(el).css("margin-bottom"))]),
 						top : 0,
 						left : 0
 					};
@@ -2007,12 +2029,18 @@ f.extend(true,f,{
 				};
 				el.css("left", x);
 				el.css("top", y);
+                ev.stopPropagation&&ev.stopPropagation();
+                ev.cancelBubble = true;
+
+                ev.preventDefault&&ev.preventDefault();
+                ev.returnValue = false;
+
 			};
 			
 			el.bind("mousedown",function( ev ) {
 				var ev = ev || window.event;
 				var el = defaults.el;
-				var offset = f.getOffset(el.el[0]);
+				var offset = f.getOffset( el[0] );
 				var x = ev.clientX - offset.x;
 				var y = ev.clientY - offset.y;
 				dx = x;
@@ -2025,6 +2053,7 @@ f.extend(true,f,{
 			});
 		}
 	};
+
 	var Resize = function(setting, context) {
 		if(!(this instanceof Resize)) {
 			return new Resize( setting, this );
@@ -2181,12 +2210,12 @@ f.extend(true,f,{
 			this.dialogEvents();
 		},
 		createDialog : function() {
-			var dialog = f(f.prototype.CE("div",{ class : "f-dialog-wrap" ,className : "f-dialog-wrap" ,style:"height:"+this.defaults.height+";width:"+this.defaults.width+";z-index:"+this.defaults.zIndex++})).html( this.data("dialogHtml", {title: this.defaults.title,content:this.defaults.content}) );
+			var dialog = f(f.prototype.CE("div",{ className : "f-dialog-wrap" ,style:"height:"+this.defaults.height+";width:"+this.defaults.width+";z-index:"+this.defaults.zIndex++})).html( this.data("dialogHtml", {title: this.defaults.title,content:this.defaults.content}) );
 			f(document.body).append( dialog );
 			this.dialog = dialog;
 		},
 		overlay : function() {
-			var mask = f.prototype.CE("div",{class : "f-mask", className : "f-mask", style : "z-index:"+this.defaults.zIndex++ });
+			var mask = f.prototype.CE("div",{ className : "f-mask", style : "z-index:"+this.defaults.zIndex++ });
 			f(document.body).append( f(mask) );
 			this.mask = mask;
 		},
@@ -2334,7 +2363,7 @@ f.extend(true,f,{
 		this.defaults = {
 			"event" : "click",
 			"singalHeight" : 100,
-			"time" : 1,
+			"time" : 1
 		};
 		setting = setting || {};
 		this.h4 = f("h4",this.el[0]);
@@ -2374,7 +2403,11 @@ f.extend(true,f,{
 		}
 	};
 	f.extend(true,f.prototype, {
-		Dragable : Dragable,
+		Dragable : function() {
+            this.each(function(i,el) {
+                new Dragable({el : el})
+            })
+        },
 		Resize : Resize,
 		Dialog : Dialog,
 		Tip : Tip,
