@@ -326,18 +326,20 @@ f.extend(true,f,{
     },
     support : function() {
         var fDiv = f("<div>");
-        fDiv.html("  <div><a href='sdf'></a></div>");
+        fDiv.html("  <div><a href='sdf'></a><input type=\"checkbox\"\/><\/div>");
         var a = f("a", fDiv[0])[0];
-        debugger;
-        a.get.style.cssText = "float:left";
+        var ipt = f("input", fDiv[0])[0];
+        a.style.cssText = "float:left";
         return {
             //IE8,7,6浏览器会自动trim头部和尾部的空格
             leadingWhitespace : (fDiv.get(0).firstChild.nodeType === 3),
             cssFloat : !!a.style.cssFloat,
             //IE的怪异模式的document.compatMode    值为 BackCompat
             boxModel :  document.compatMode === "CSS1Compat",
-            ajax : true
-        };
+            ajax : true,
+            enctype : !!document.createElement("form").enctype,
+            checkOn : (ipt.value === "on")
+       };
     }
 });
 //基础数组的原型;
@@ -756,7 +758,9 @@ f.extend(true,f.prototype,{
 //缓存模块
 f.uuid = 0;
 f.cache = {};
-
+f.getUuid = function() {
+    return f.uuid += 1;
+};
 f.extend(true,f.prototype,{
 	data : function( key, val ) {
 		var el = this[0];
@@ -851,12 +855,23 @@ f.extend(true, f.prototype,{
 
     },
 
-    closest : function( selector ) {
+    closest : function( selector , bContain ) {
         var node = this[0];
-        while( (node = node.parentNode) && node.nodeType !== 9 ) {
-            if( f(node).match( selector ) ) {
-                return node;
+        if( !bContain ) {
+            while( (node = node.parentNode) && node.nodeType !== 9 ) {
+                if( f(node).match( selector ) ) {
+                    return node;
+                };
             };
+            return false;
+        }else{
+            while( node && node.nodeType !== 9 ) {
+                if( f(node).match( selector ) ) {
+                    return node;
+                };
+                node = node.parentNode;
+            };
+            return false;
         };
     },
 
@@ -1101,7 +1116,91 @@ f.extend(true,f.prototype,{
 
 //div1.bind("click",function(){alert(2)})
 //事件模块;DOM2;
+f.handlers = {};//这个对象用来缓村事件函数;
 f.extend(true,f.prototype,{
+    on : function(ev, selector, callback) {
+        f.each(this, function(node,i) {
+            var uuid = node.uuid  || ( node.uuid = f.getUuid() );
+            var events = f.handlers[uuid] || ( f.handlers[uuid] = {} );
+            events[ev] = events[ev] || [];
+            //第一次的时候这个数组的length就是0，就绑定一次事件;
+            if( events[ev].length === 0 ) {
+                f(node).bind2(ev, function(ee) {
+                    f.prototype.dispatch(node,events[ev],ee);
+                }, false);
+            };
+
+            var fn;
+
+            if( typeof selector === "function" ) {
+                //走这边就说明就不是走事件代理了;
+                fn = callback = selector;
+                selector = "";
+            }else if( typeof selector === "string") {
+                fn = function( e ) {
+                    e = e || window.event;
+                    var fEl = f( e.srcElement || e.target );
+                    if( fEl.closest( selector ,true) ) {
+                        callback.call(fEl,e);
+                    };
+                };
+            };
+            //这东西要绑定的，因为如果是事件代理的话，事件的Fn并不是真正的的回调函数;
+            callback.uuid = fn.uuid = uuid;
+            events[ev].push( fn );
+            //this.bind2(ev, fn, false);
+        });
+    },
+    off : function(ev, callback) {
+        f.each(this, function(node,i) {
+            var uuid = node.uuid  || ( node.uuid = f.getUuid() );
+            var events = f.handlers[uuid] || ( f.handlers[uuid] = {} );
+            events[ev] = events[ev] || [];
+            for(var i= 0, n = events[ev].length ; i< n ; i++ ) {
+                var fn = events[ev][i];
+                if( fn.uuid === callback.uuid ) {
+                    events[ev].splice(i, 1);
+                };
+            };
+        });
+    },
+
+    dispatch : function(context, fns ,ev) {
+        for(var i= 0, n= fns.length; i< n; i++ ) {
+            fns[i].call(context,ev);
+        };
+    },
+
+    trigger : function(type,ev) {
+        var _this = this;
+        //如果传进来的第二个参数不是事件对象；
+        // 要弄成根据ev的类型新建不同的ev事件;
+        if( !(ev instanceof Event) ) {
+            switch( ev ) {
+                case "click":
+                case "dblclick" :
+                case "mouseover":
+                case "mouseenter" :
+                case "mousemove" :
+                    ev = document.createEvent("MouseEvents");
+                break;
+
+                case "" :
+                    ev = document.createEvent("UIEvents");
+                break;
+
+                default :
+                    ev = document.createEvent("HTMLEvents");
+                break;
+            };
+        };
+        f.each(this, function(node,i) {
+            var uuid = node.uuid;
+            var fns = f.handlers[uuid]&&f.handlers[uuid][type];
+            if( !uuid || fns.length===0 )return ;
+            _this.dispatch(node, fns, ev);
+        });
+    },
 	bind2 : function(ev, fn, capture) {
         this.each(function(i,el) {
             //capture = capture || false;
@@ -1810,7 +1909,7 @@ f.extend(true,f,{
 		document.body.append( scr );
 	},
 	loadCss : function( url ) {
-		f("head").append(f.prototype.CE("link" ,{href:url ,rel:"stylesheet",type:"text\/css"}) );
+		f("head").append(f("<link>" ,{href:url ,rel:"stylesheet",type:"text\/css"}) );
 	}
 });
 
@@ -1932,6 +2031,7 @@ f.extend(true,f,{
    }
 });
 
+//一些插件;
 (function() {
 	var Button = function() {
 	};
@@ -2272,11 +2372,11 @@ f.extend(true,f,{
 		} //调整距离的说， x轴和y轴的距离;
 	}
 	*/
-	function Tip( setting ,el) {
+	function Tip( setting ) {
 		if(!(this instanceof Tip)) {
-			return new Tip( setting ,this.el );
+			return new Tip( setting  );
 		};
-		this.el = el;
+		this.el = setting.el;
 		this.defaults = {
 			tip : "错误",
 			times : false,
@@ -2292,7 +2392,7 @@ f.extend(true,f,{
 	Tip.prototype = {
 		contructor : Tip,
 		initTip : function() {
-			this.wrap = f( f.prototype.CE("div") );
+			this.wrap = f("<div>");
 			this.wrap.html( f.template( this.getContent(), this.defaults) );
 			this.show();
 			this.defaults.times&&this.timeout();
@@ -2315,9 +2415,9 @@ f.extend(true,f,{
 		},
 		show : function() {
 			var _this = this;	
-			f(this.el[0]).addClass("samllTip-parent");
-			this.div = f(".smallTip-body",this.wrap.el[0]);
-			f(this.el[0]).append( this.div );
+			f(this.el).addClass("samllTip-parent");
+			this.div = f(".smallTip-body",this.wrap[0]);
+			f(this.el).append( this.div );
 		},
 		position : function() {
 			var _this = this;
@@ -2327,23 +2427,24 @@ f.extend(true,f,{
 				"bottom" : "top",
 				"top" : "bottom"
 			};
-			f(".smallTip-arrow-"+ position[ this.defaults.position ],this.div.el[0]).css("display","block");
+			f(".smallTip-arrow-"+ position[ this.defaults.position ],this.div[0]).css("display","block");
 			switch( this.defaults.position ) {
 				case "left" :
-					this.div.css( "top",parseInt( f(this.el[0]).css("height") )/-2 + this.defaults.distance.x);
-					this.div.css("left",parseInt( -parseInt( f(this.div).css("width") )-6 + this.defaults.distance.y ));
+					this.div.css( "top",(parseInt( f(this.el[0]).css("height") ) - 16) /2  + this.defaults.distance.x);
+					this.div.css("left",parseInt( -parseInt( f(this.div[0]).css("width") ) -4 + this.defaults.distance.y ));
 				break;
 				case "top" :
-					this.div.css( "top",-parseInt( f(this.div).css("height") + this.defaults.distance.x ));
-					this.div.css("left",parseInt( parseInt( f(this.el[0]).css("width") )/2 + this.defaults.distance.y  ));
+					this.div.css( "top",-parseInt( parseInt(f(this.div[0]).css("height") ) +12 + this.defaults.distance.x ));
+					this.div.css("left",parseInt( parseInt( f(this.div[0]).css("width") )/2 + this.defaults.distance.y  ));
 				break;
 				case "right" :
-					this.div.css( "top",parseInt( f(this.el[0]).css("height") + this.defaults.distance.x )/-2);
+                    debugger;
+                    this.div.css( "top",(parseInt( f(this.el[0]).css("height") ) - 16) /2  + this.defaults.distance.x);
 					this.div.css("left",parseInt( parseInt( f(this.el[0]).css("width") )+10+ this.defaults.distance.y  ));
 				break;
 				case "bottom" :
-					this.div.css("left", parseInt( parseInt( f(this.el[0]).css("width") )/2  + this.defaults.x));	
-					this.div.css("bottom", -parseInt( f(this.div).css("height"))+ this.defaults.distance.y  );
+					this.div.css("left", parseInt( parseInt( f(this.el[0]).css("width") )/2 - 30  + this.defaults.distance.x));
+					this.div.css("bottom", "-44px"  );
 				break;
 			};
 		},
@@ -2354,7 +2455,7 @@ f.extend(true,f,{
 			},2000);
 		}
 	};
-	
+
 	var Accordion = function(setting, el) {
 		if(!(this instanceof Accordion)) {
 			return new Accordion( setting ,this.el );
@@ -2410,7 +2511,10 @@ f.extend(true,f,{
         },
 		Resize : Resize,
 		Dialog : Dialog,
-		Tip : Tip,
+		Tip : function( setting ) {
+            setting.el = this
+            new Tip( setting );
+        },
 		Accordion : Accordion,
 		Button : Button,
 		Menu : Menu,
@@ -2617,7 +2721,3 @@ function isPhoneNumber(temp) {
 	return true
 };
 
-f(function(){
-	//l( f("#div2") );
-	//f.loadCss("style\\ui.css")
-});

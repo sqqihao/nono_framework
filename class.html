@@ -16,6 +16,12 @@
 	filter:alpha(opacity:10);  
 	opacity:0.2;
 }
+#div2{
+	position:relative;
+	background:#F9F;
+	filter:alpha(opacity:10);  
+	opacity:0.2;
+}
 .div2{
 	height:40px;
 	/*margin:10px;*/
@@ -35,10 +41,15 @@
 </style>
 <input id="ipt1" value=""/>
 <div id="div1">111</div>
-<div class="div1 div2"></div>
-<div class="div1"></div>
-<div class="div1"></div>
-<div class="div1"></div>
+<div id="div2">222</div>
+<div class="div1 div2">div1+div2</div>
+<div class="div1">
+<br>
+	<div class="div3">div3</div>
+<br>
+</div>
+<div class="div1">div1</div>
+<div class="div1">div1</div>
 <div id="div2"></div>
 <div id="size">
     content;
@@ -73,6 +84,41 @@
     </ul>
 </div>
 <script type="text/javascript" src="class.js"></script>
+<script>
+/*
+function addE(el, type , fn) {
+	el.addEventListener&&el.addEventListener(type, fn ,false);
+	el.attachEvent&&el.attachEvent("on"+type, fn);
+};
+var oDiv1 = f("#div1")[0];
+var oDiv2 = f("#div2")[0];
+addE(oDiv1,"click", function(){
+	alert(1);
+}, false);
+
+addE(oDiv2,"click", function(){
+	alert(2);
+}, false);
+*/
+/*
+"Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.103 Safari/537.36"
+"IE7-IE10"
+"Mozilla/5.0 (Windows NT 6.2; WOW64; rv:31.0) Gecko/20100101 Firefox/31.0"
+现在所有浏览器都可以直接触发事件;
+oDiv1.click();
+oDiv2.click()
+*/
+/*
+用这种方法CHROME和FF是可以触发事件的,IE下不行;
+var ev = document.createEvent("HTMLEvents");
+ev.initEvent("click", false, true);
+oDiv1.dispatchEvent(ev);
+*/
+f(function(){
+	//l( f("#div2") );
+	f.loadCss("style\\ui.css")
+});
+</script>
 <!--
 <script src="require/require.js"></script>
 <script src="require/app.js"></script>
