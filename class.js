@@ -1151,6 +1151,7 @@ f.extend(true,f.prototype,{
             //this.bind2(ev, fn, false);
         });
     },
+
     off : function(ev, callback) {
         f.each(this, function(node,i) {
             var uuid = node.uuid  || ( node.uuid = f.getUuid() );
@@ -1201,6 +1202,21 @@ f.extend(true,f.prototype,{
             _this.dispatch(node, fns, ev);
         });
     },
+
+    getEv : function( ev ) {
+        return ev || window.event;
+    },
+
+    preventDefault : function( ev ) {
+        ev.preventDefault && ev.preventDefault();
+        ev.returnValue = false;
+    },
+
+    stopPropagation : function( ev ) {
+        ev.stopPropagation && ev.stopPropagation();
+        ev.cancelBubble = true;
+    },
+
 	bind2 : function(ev, fn, capture) {
         this.each(function(i,el) {
             //capture = capture || false;
@@ -2058,7 +2074,7 @@ f.extend(true,f,{
 	*{ clientScreen : true }
 	*new Dragable({el : f("#div1").get(0)});
 	*/
-	var Dragable = function( setting ) {
+    var Dragable = function( setting ) {
 		if( !(this instanceof Dragable)) {
 			return new Dragable( setting );
 		};
@@ -2077,7 +2093,7 @@ f.extend(true,f,{
 		},
 		setPosition : function( el ) {
 			var posStatus;
-			if( el.css("position") === "static" ) {
+			if( el.css("position") !== "static" ) {
                 var lt = f.getOffset( el[0] );
 				var l = lt.x;
 				var t = lt.y;
@@ -2137,7 +2153,7 @@ f.extend(true,f,{
 
 			};
 			
-			el.bind("mousedown",function( ev ) {
+			el.on("mousedown",function( ev ) {
 				var ev = ev || window.event;
 				var el = defaults.el;
 				var offset = f.getOffset( el[0] );
@@ -2146,31 +2162,36 @@ f.extend(true,f,{
 				dx = x;
 				dy = y;
 				
-				f(document).bind2("mousemove",moveFn,false);
-				f(document).bind2("mouseup",function() {
-					f(document).unbind2("mousemove",moveFn,false);
+				f(document).on("mousemove",moveFn,false);
+				f(document).on("mouseup",function() {
+					f(document).off("mousemove",moveFn,false);
 				});
 			});
 		}
 	};
 
-	var Resize = function(setting, context) {
+	Resize = function(setting ) {
 		if(!(this instanceof Resize)) {
-			return new Resize( setting, this );
+			return new Resize( setting );
 		};
-		if( !(context instanceof f) ) {
-			context = f(context);
-		};
-		var eWrap = this.wrap( context );
-		var defaults = {
-			el : eWrap
-		};
-		f.defaults(defaults ,setting);
-		this.defaults = defaults;
+        var el ;
+        if( !(setting.el instanceof f) ) {
+            el = f(setting.el);
+        }else{
+            el = setting.el;
+        };
+
+        var defaults = {
+        };
+        f.defaults(defaults ,setting);
+
+
+        defaults.el = this.wrap( el );
+        this.defaults = defaults;
 		this.init( defaults );
 		this.resizeElement();
 	};
-	//继承拖拽;
+	//继承的原型拖拽;
 	Resize.prototype = f.extend__proto__( Dragable.prototype );
 	//设置constructor;
 	Resize.prototype.constructor = Resize;
@@ -2198,7 +2219,7 @@ f.extend(true,f,{
 				.data("position",context.css("position"));
 				
 			context.css("left",10).css("top",10).css("position","absolute");
-			var wrapDiv = f(f.prototype.CE("div"));
+			var wrapDiv = f("<div>");
 			wrapDiv.html( Resize.getWrap() );
 			var eWrap = f( ".wrapSize",wrapDiv.first() );
 			eWrap.append(context);
@@ -2209,39 +2230,37 @@ f.extend(true,f,{
 			return eWrap;
 		},
 		resizeElement : function() {
-			this.left = f(".l",this.defaults.el.el[0]);
-			this.top = f(".t",this.defaults.el.el[0]);
-			this.right = f(".r",this.defaults.el.el[0]);
-			this.bottom = f(".b",this.defaults.el.el[0]);
+			this.left = f(".l",this.defaults.el[0]);
+			this.top = f(".t",this.defaults.el[0]);
+			this.right = f(".r",this.defaults.el[0]);
+			this.bottom = f(".b",this.defaults.el[0]);
 			var dx, dy;
 			var els = [this.left, this.top, this.right, this.bottom];
 			
 			f.each(els, function(el) {				
-				el.bind("mousedown",function( ev ) {
-					var offset = f.getOffset(el.el[0]);
-					var x = ev.clientX - offset.x;
-					var y = ev.clientY - offset.y;
-					dx = x;
-					dy = y;
-					f(document).bind2("mousemove",moveFn,false);
-					f(document).bind2("mouseup",function() {
-						f(document).unbind2("mousemove",moveFn,false);
+				el.on("mousedown",function( ev ) {
+					dx = ev.clientX;
+					dy = ev.clientY;
+
+					f(document).on("mousemove",moveFn,false);
+					f(document).on("mouseup",function() {
+						f(document).off("mousemove",moveFn,false);
 					});
 				});
 			});
+
 			var moveFn = function(ev) {
 				var ev = ev || window.event;
 				var el = f( ev.target || ev.srcElement );
-				var parentXY = f.getOffset( el.paren().first() );
-				var x = ev.clientX - dx - parentXY.x;
-				var y = ev.clientY - dy - parentXY.y;
+				var x = ev.clientX - dx;
+				var y = ev.clientY - dy;
 				
-				el.css("left", x);
-				el.css("top", y);
-				ev.stopPropagation();
+				el.css("width", x);
+				el.css("height", y);
 			};
 		}
 	});
+    var a = new Resize( {el : f("#size")} );
 	/*
 	f(function() {		
 		var a = f("body");
