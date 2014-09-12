@@ -431,6 +431,7 @@ f.extend(f.prototype, {
 
 		if(str.indexOf("#")==0) {
 			this.push( context.getElementById( str.substring(1) ) );
+            return this;
 		}else if(str.indexOf("\.")===0) {
 			if( context.getElementsByClassName ) {
 				//this.el = Array.prototype.concat.call( document.getElementsByClassName( str.substring(1) ) ,[]);
@@ -827,7 +828,7 @@ f.extend(true, f.prototype,{
     },
 
 	remove : function() {
-		f.each(this.el, function(el , index) {
+		f.each(this, function(el , index) {
 			el.parentNode.removeChild( el );
 		});
 	},
@@ -2093,7 +2094,7 @@ f.extend(true,f,{
 		},
 		setPosition : function( el ) {
 			var posStatus;
-			if( el.css("position") !== "static" ) {
+			if( el.css("position") !== "absolute" ) {
                 var lt = f.getOffset( el[0] );
 				var l = lt.x;
 				var t = lt.y;
@@ -2260,7 +2261,7 @@ f.extend(true,f,{
 			};
 		}
 	});
-    var a = new Resize( {el : f("#size")} );
+    //var a = new Resize( {el : f("#size")} );
 	/*
 	f(function() {		
 		var a = f("body");
@@ -2269,7 +2270,7 @@ f.extend(true,f,{
 	*/
 	var Dialog = function(setting) {
 		if(!(this instanceof Dialog)) {
-			return new Dialog( setting, this );
+			return new Dialog( setting );
 		};
 		setting = setting || {};
 		var defaults = {
@@ -2329,12 +2330,12 @@ f.extend(true,f,{
 			this.dialogEvents();
 		},
 		createDialog : function() {
-			var dialog = f(f.prototype.CE("div",{ className : "f-dialog-wrap" ,style:"height:"+this.defaults.height+";width:"+this.defaults.width+";z-index:"+this.defaults.zIndex++})).html( this.data("dialogHtml", {title: this.defaults.title,content:this.defaults.content}) );
+			var dialog = f(f("<div>",{ "class" : "f-dialog-wrap" ,style:"height:"+this.defaults.height+";width:"+this.defaults.width+";z-index:"+this.defaults.zIndex++})).html( this.data("dialogHtml", {title: this.defaults.title,content:this.defaults.content}) );
 			f(document.body).append( dialog );
 			this.dialog = dialog;
 		},
 		overlay : function() {
-			var mask = f.prototype.CE("div",{ className : "f-mask", style : "z-index:"+this.defaults.zIndex++ });
+			var mask = f("<div>",{ "class" : "f-mask", style : "z-index:"+this.defaults.zIndex++ });
 			f(document.body).append( f(mask) );
 			this.mask = mask;
 		},
@@ -2357,21 +2358,23 @@ f.extend(true,f,{
 		setPosition : function() {
 			var client = f.docClient();
 			this.dialog.css("left", (client.width-parseInt(this.dialog.css("width")))/2)
-				.css("top",(client.height-parseInt(this.dialog.css("height")))/2);
+				.css("top",(client.height-parseInt(this.dialog.css("height")))/2)
+                .css("position","absolute");
 		},
 		draggable : function() {
-			Dragable.call( this.dialog );
+            new Dragable({el : this.dialog});
+			//Dragable.call( this.dialog );
 		},
 		dialogEvents : function() {
 			var _this = this;
-			f.each( f(".close" , this.dialog.first()).el ,function(el ,index) {
+			f.each( f(".close" , this.dialog.first()) ,function(el ,index) {
 				f(el).bind2("click", function(ev) {
 					_this.dialog.remove();
 					_this.mask.remove();
 					_this.defaults.onClose();
 				});
 			});
-			f.each( f(".ok" , this.dialog.first()).el ,function(el ,index) {
+			f.each( f(".ok" , this.dialog.first()) ,function(el ,index) {
 				f(el).bind2("click", function(ev) {
 					_this.dialog.remove();
 					_this.mask.remove();
@@ -2433,7 +2436,8 @@ f.extend(true,f,{
 			</div>';
 		},
 		show : function() {
-			var _this = this;	
+			var _this = this;
+            debugger;
 			f(this.el).addClass("samllTip-parent");
 			this.div = f(".smallTip-body",this.wrap[0]);
 			f(this.el).append( this.div );
@@ -2531,6 +2535,7 @@ f.extend(true,f,{
 		Resize : Resize,
 		Dialog : Dialog,
 		Tip : function( setting ) {
+            setting = setting || {};
             setting.el = this
             new Tip( setting );
         },
