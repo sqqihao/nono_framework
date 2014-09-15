@@ -2526,6 +2526,7 @@ f.extend(true,f,{
 			f(this.el[0]).css("width", val);
 		}
 	};
+
 	f.extend(true,f.prototype, {
 		Dragable : function() {
             this.each(function(i,el) {
@@ -2550,6 +2551,18 @@ f.extend(true,f,{
 		loader : loader
 	});
 })();
+
+f.extend( true , f, {
+    console : function ( msg ) {
+        var el = f("#console");
+        if( !el[0] ) {
+            f("body").append( f("<div>",{id:"console"}) );
+            el = f("#console");
+        };
+        var oDiv = f("<div>").html( msg);
+        el.append(oDiv);
+    }
+});
 /*
 var rTpl = /<%([^%>]+)%>/gi;
 data = {
