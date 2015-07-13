@@ -2768,11 +2768,9 @@ function isPhoneNumber(temp) {
  * @method setInterval
  * @method clearInterval
  */
-var TaskList = function() {
-    this.list = [],
-        this.timer = null
-};
+var TaskList = function() {this.list = [], this.timer = null};
 TaskList.tId = 0;
+
 /**
  * @param {function}
  * */
@@ -2781,6 +2779,7 @@ TaskList.prototype.addTask = function (fn) {
     if(typeof fn === "function")this.list.push(fn);
     return this;
 };
+
 /**
  * @param {function}
  * */
@@ -2792,24 +2791,24 @@ TaskList.prototype.removeTask = function(fn) {
         };
     };
 };
+
 /**
  * @desc  执行所有的任务
  * */
 TaskList.prototype.run = function() {
-    var len = 0;
-    while(++len){
-        if( this.list.length === len ) return ;
-        this.list[len]();
-    };
+    for(var i=0; i<this.list.length; i++ ){
+        this.list[i]();
+    }
 };
+
 /**
  * @desc 循环执行任务
  * @param 间隔执行任务的时间
  * */
 TaskList.prototype.setInterval = function ( time ) {
-    time = time || 33;
     this.timer = setInterval(this.run.bind(this), time);
 };
+
 /**
  * @desc 暂停执行任务列表
  * */
@@ -2925,6 +2924,154 @@ TaskList.prototype.clearInterval = function() {
         });
     };
 
+
+    /**
+     * @desc 进度的加载, 图片的预加载;
+     * @param array;
+     * @param func ==>> this's callback;
+     * @return Object;
+     */
+    function loadImgs(arr, cb) {
+
+        var obj = {};
+
+        for (var i = 0; i < arr.length; i++) {
+            (function(i) {
+                var img = new Image();
+                img.onload = function () {
+                    console.log(this.src);
+                    obj[arr[i]] = img;
+                    done();
+                }
+                img.src = arr[i];
+            })(i);
+        };
+
+        var len = arr.length;
+
+        function done(  ){
+            if( --len===0 ) {
+                cb( obj );
+            };
+        };
+
+        return obj;
+
+    };
+
+    //导出;
+    f.loadImgs = loadImgs;
+
+    /**
+     * @example
+         var obj = Object.create( new EventBase )
+         obj.addListener("click", function(type) {
+            console.log(type)
+         })
+
+         obj.fireEvent("click");
+     * */
+    var EventBase = function () {};
+
+    EventBase.prototype = {
+        /**
+         * 注册事件监听器
+         * @name addListener
+         * @grammar editor.addListener(types,fn)  //types为事件名称，多个可用空格分隔
+         * @example
+         * editor.addListener('selectionchange',function(){
+         *      console.log("选区已经变化！");
+         * })
+         * editor.addListener('beforegetcontent aftergetcontent',function(type){
+         *         if(type == 'beforegetcontent'){
+         *             //do something
+         *         }else{
+         *             //do something
+         *         }
+         *         console.log(this.getContent) // this是注册的事件的编辑器实例
+         * })
+         */
+        addListener:function (types, listener) {
+            types = types.trim().split(' ');
+            for (var i = 0, ti; ti = types[i++];) {
+                getListener(this, ti, true).push(listener);
+            }
+        },
+
+        /**
+         * 移除事件监听器
+         * @name removeListener
+         * @grammar editor.removeListener(types,fn)  //types为事件名称，多个可用空格分隔
+         * @example
+         * //changeCallback为方法体
+         * editor.removeListener("selectionchange",changeCallback);
+         */
+        removeListener:function (types, listener) {
+            types = types.trim().split(' ');
+            for (var i = 0, ti; ti = types[i++];) {
+                removeItem(getListener(this, ti) || [], listener);
+            }
+        },
+
+        /**
+         * 触发事件
+         * @name fireEvent
+         * @grammar editor.fireEvent(types)  //types为事件名称，多个可用空格分隔
+         * @example
+         * editor.fireEvent("selectionchange");
+         */
+        fireEvent:function () {
+            var types = arguments[0];
+            types = types.trim().split(' ');
+            for (var i = 0, ti; ti = types[i++];) {
+                var listeners = getListener(this, ti),
+                    r, t, k;
+                if (listeners) {
+                    k = listeners.length;
+                    while (k--) {
+                        if(!listeners[k])continue;
+                        t = listeners[k].apply(this, arguments);
+                        if(t === true){
+                            return t;
+                        }
+                        if (t !== undefined) {
+                            r = t;
+                        }
+                    }
+                }
+                if (t = this['on' + ti.toLowerCase()]) {
+                    r = t.apply(this, arguments);
+                }
+            }
+            return r;
+        }
+    };
+    /**
+     * 获得对象所拥有监听类型的所有监听器
+     * @public
+     * @function
+     * @param {Object} obj  查询监听器的对象
+     * @param {String} type 事件类型
+     * @param {Boolean} force  为true且当前所有type类型的侦听器不存在时，创建一个空监听器数组
+     * @returns {Array} 监听器数组
+     */
+    function getListener(obj, type, force) {
+        var allListeners;
+        type = type.toLowerCase();
+        return ( ( allListeners = ( obj.__allListeners || force && ( obj.__allListeners = {} ) ) )
+            && ( allListeners[type] || force && ( allListeners[type] = [] ) ) );
+    };
+
+    function removeItem(array, item) {
+        for (var i = 0, l = array.length; i < l; i++) {
+            if (array[i] === item) {
+                array.splice(i, 1);
+                i--;
+            };
+        };
+    };
+
+    f.EventBase = EventBase;
     //兼容AMD版本;
     if ( typeof define === "function" && define.amd ) {
         define( "CommonControl", [], function() {

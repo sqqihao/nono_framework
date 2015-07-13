@@ -1,0 +1,361 @@
+<!--
+//设置内容;
+window.onWebMessage( '{"type":"setItems","data":{"items":[{"name":1111},{"name":2222}]}}' ) ;
+
+//设置内容, 对应的item对象如果active为true为激活态;
+window.onWebMessage( '{"type":"setItems","data":{"items":[{"name":1000},{"name":1111},{"name":2222},{"name":3333,"active":true}]}}' ) ;
+
+//设置某个第n个位置的item;
+window.onWebMessage('{"type":"setItem","data":[2,{ "name" : "add-item"}]}');
+
+//激活第三个锚链接为选中态;
+window.onWebMessage( '{"type":"active","data":2}' )
+
+//获取目前的数据:
+window.onWebMessage( '{"type":"getItem"}' );
+-->
+
+<html>
+	<head>
+		<meta charset="utf-8" />
+        <script src="http://cdn.bootcss.com/jquery/2.1.4/jquery.js"></script>
+	</head>
+    <style>
+        /*初始的reset样式*/
+        *{
+            margin:0;
+            padding:0;
+        }
+        .time-line-wrap{
+            position: relative;
+            width: 400px;
+            margin:0 auto;
+        }
+        ul{
+            list-style: none;
+        }
+        body,html{
+            height: 100%;
+        }
+        body{
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+
+        /*样式开始*/
+        .scroll-time-line{
+            height:100%;
+            overflow: hidden;
+        }
+        .time-line-wrap{
+            position: relative;
+        }
+        .time-line-ul{
+            position: relative;
+        }
+        /**
+        时间轴的轴用伪类实现;
+        */
+        .time-line-ul::before{
+            display: block;
+            position:absolute;
+            content:"";
+            height:100%;
+            width:1;
+            left:27px;
+            top:0;
+            background: #eee;
+        }
+        .time-line-ul li{
+            padding:14px;
+            position: relative;
+        }
+        .time-line-ul input {
+            vertical-align: super;
+            border-radius: 4px;
+            border:1px solid #eee;
+            padding:4px;
+            line-height: 22px;
+            margin-left:10px;
+        }
+        /**
+        使用after和before伪类实现input前面的三角形;
+        */
+        .time-line-ul li::before{
+            position: absolute;
+            content: "";
+            display: block;
+            top: 21px;
+            left: 40px;
+            width: 0px;
+            height: 0px;
+            border: 10px solid rgba(0, 0, 0, 0);
+            border-right: 10px solid #EEE;
+        }
+        .time-line-ul li::after{
+            position: absolute;
+            content: "";
+            display: block;
+            top: 21px;
+            left: 41px;
+            width: 0px;
+            height: 0px;
+            border: 10px solid rgba(0, 0, 0, 0);
+            border-right: 10px solid #fff;
+        }
+        /**
+        默认时间轴锚链接的样式
+        */
+        .time-line-icon{
+            width: 26px;
+            height: 28px;
+            display: inline-block;
+            background: url(timeLine_icon.png);
+        }
+        /**
+        鼠标移动上来，或者锚链接有active时候的背景图样式
+        */
+        .time-line-icon.active,.time-line-icon:hover{
+            background-position: 0px 28px;
+        }
+    </style>
+
+    <!--模板，勿删!-->
+    <script type="text/tempate" id="li-tpl">
+        <% for(var i=0; i<items.length; i++ ) {%>
+            <li class="li-<%=i%>">
+                <a href="###" class="time-line-icon <% if(items[i].active){ %> <%="active"%> <%}%> "></a>
+                <input type="text" value="<%=items[i].name%>"/>
+            </li>
+        <% } %>
+    </script>
+
+	<body>
+        <!--
+        滚动出现在这个div里面
+        -->
+        <div class="scroll-time-line">
+
+            <!---
+            时间轴相关的html结构
+            -->
+            <div class="time-line-wrap">
+                <ul class="time-line-ul">
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                    <li>
+                        <a href="###" class="time-line-icon"></a> <input type="text" value="2015"/>
+                    </li>
+                </ul>
+            </div>
+            <!---
+            时间轴相关的html结构结束
+            -->
+        </div>
+        <script>
+            //模板引擎的代码
+            (function () {
+                //underscore抄的模板引擎;
+                var escaper = /\\|'|\r|\n|\t|\u2028|\u2029/g;
+
+                var escapes = {
+                    "'":      "'",
+                    '\\':     '\\',
+                    '\r':     'r',
+                    '\n':     'n',
+                    '\t':     't',
+                    '\u2028': 'u2028',
+                    '\u2029': 'u2029'
+                };
+
+                $.templateSettings = {
+                    evaluate    : /<%([\s\S]+?)%>/g,
+                    interpolate : /<%=([\s\S]+?)%>/g,
+                    escape      : /<%-([\s\S]+?)%>/g
+                }
+                $.template = function(text, data, settings) {
+                    var render;
+                    settings = $.extend({}, settings, $.templateSettings);
+
+                    // Combine delimiters into one regular expression via alternation.
+                    var matcher = new RegExp([
+                        (settings.escape || noMatch).source,
+                        (settings.interpolate || noMatch).source,
+                        (settings.evaluate || noMatch).source
+                    ].join('|') + '|$', 'g');
+
+                    // Compile the template source, escaping string literals appropriately.
+                    var index = 0;
+                    var source = "__p+='";
+                    text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
+                        source += text.slice(index, offset)
+                                .replace(escaper, function(match) { return '\\' + escapes[match]; });
+
+                        if (escape) {
+                            source += "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'";
+                        }
+                        if (interpolate) {
+                            source += "'+\n((__t=(" + interpolate + "))==null?'':__t)+\n'";
+                        }
+                        if (evaluate) {
+                            source += "';\n" + evaluate + "\n__p+='";
+                        }
+                        index = offset + match.length;
+                        return match;
+                    });
+                    source += "';\n";
+
+                    // If a variable is not specified, place data values in local scope.
+                    if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
+
+                    source = "var __t,__p='',__j=Array.prototype.join," +
+                            "print=function(){__p+=__j.call(arguments,'');};\n" +
+                            source + "return __p;\n";
+
+                    try {
+                        render = new Function(settings.variable || 'obj', '_', source);
+                    } catch (e) {
+                        e.source = source;
+                        throw e;
+                    }
+
+                    if (data) return render(data, _);
+                    var template = function(data) {
+                        return render.call(this, data);
+                    };
+
+                    // Provide the compiled function source as a convenience for precompilation.
+                    template.source = 'function(' + (settings.variable || 'obj') + '){\n' + source + '}';
+
+                    return template;
+                };
+            })();
+
+            (function( fn ) {
+
+                $( fn.call( $ ,$) );
+
+            })(function ($) {
+
+                $.timeLineSetting = {
+                    offsetTop : 100
+                };
+                $.extend($.fn, {
+                    timeLine : function() {
+                        $.each(this, function() {
+
+                            var _this = this;
+
+                            $(this).delegate(".time-line-ul>li", "click", function( ev ) {
+
+                                $(".time-line-icon.active").removeClass("active");
+
+                                $(this).find(".time-line-icon").addClass("active");
+
+                                $(_this).animate({scrollTop: this.offsetTop - $.timeLineSetting.offsetTop},300);
+
+                                ev.preventDefault();
+
+                            });
+                        });
+                    }
+                });
+            });
+            $(function() {
+                var compile= $.template( $("#li-tpl").html() || "");
+
+                //与客户端的交互事件;
+                var orginalData = {};
+                window.onWebMessage = function( msg ) {
+                    msg = JSON.parse(msg);
+                    switch( msg.type ) {
+                        case "setItems" :
+                            $(".time-line-ul").html( compile(msg.data) );
+                            //结构化复制;
+                            orginalData = JSON.parse(JSON.stringify(msg.data));
+                            break;
+
+                        case "setItem" :
+                            orginalData.items&&orginalData.items.splice(msg.data[0],0,msg.data[1]);
+                            $(".time-line-ul").html( compile(orginalData) );
+                            break;
+
+                        case "getItem" :
+                                alert(JSON.stringify( orginalData ));
+                            break;
+
+                        case "active" :
+                            $(".time-line-icon.active").removeClass("active");
+                            $(".time-line-ul>li").eq( msg.data).find(".time-line-icon").addClass("active")
+                            break;
+
+                    };
+
+                };
+
+                //启用插件;
+                $(".scroll-time-line").timeLine();
+            })
+        </script>
+	</body>
+</html>
