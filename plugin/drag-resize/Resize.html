@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="http://cdn.bootcss.com/jquery/1.9.0/jquery.js"></script>
+    <script src="Resize.js"></script>
+    <script src="Drag.js"></script>
+</head>
+<style>
+    body{
+        margin:0;
+        padding:0;
+    }
+</style>
+<body>
+    <div id="panel">
+
+    </div>
+</body>
+<script>
+    window.onload = function () {
+
+        var instance = new nono.Resize( document.getElementById("panel"), {
+
+            //限制元素的移动区域
+            "limit" : {
+                left : 0,
+                top :0 ,
+                width : 1000,
+                height : 1000
+            },
+
+            //设置最小宽高
+            "minWidth" : 20,
+            "minHeight" : 20
+
+        });
+
+        instance.child.className += " draggable";
+
+        new  nono.DragDrop({
+
+            //可选值为 鼠标移动上去的手型样式;
+            "cursor" : "move"
+
+        })
+    };
+</script>
+</html>
