@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="http://gildas-lormeau.github.io/zip.js/demos/zip.js"></script>
+    <script src="http://gildas-lormeau.github.io/zip.js/demos/mime-types.js"></script>
+    <script src="http://apps.bdimg.com/libs/jquery/1.9.0/jquery.js"></script>
+    <script src="http://files.cnblogs.com/files/diligenceday/UnZipArchive.js"></script>
+</head>
+<body>
+<h2>
+    demo
+</h2>
+<div>
+    <input type="file" id="file">
+</div>
+<ul id="dir">
+
+</ul>
+<script>
+    $("#file").change(function (e) {
+        var file = this.files[0];
+        window.un = new UnZipArchive( file );
+        un.getData( function() {
+            //获取所以的文件和文件夹列表;
+            var arr = un.getEntries();
+            //拼接字符串
+            var str = "";
+            for(var i=0; i<arr.length; i++ ) {
+                //点击li的话直接下载文件;
+                str += "<li onclick=download('"+arr[i]+"')>"+arr[i]+"</li>"
+            };
+            $("#dir").html( str );
+        });
+    });
+    var download = function ( filename ) {
+        un.download( filename );
+    };
+</script>
+</body>
+</html>
