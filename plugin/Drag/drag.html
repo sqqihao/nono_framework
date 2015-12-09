@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="http://cdn.bootcss.com/jquery/1.9.0/jquery.js"></script>
+    <script src="Drag.js"></script>
+</head>
+<body>
+    <div id="edit-panel" style="width:1000px;height: 1000px">
+        <div class="draggable" style="position:absolute;width:100px;height: 100px;background: #f00"></div>
+    </div>
+</body>
+<script>
+
+    new nono.DragDrop({
+
+        //如果有containment，那么拖拽的元素会被限制到containment这个dom节点中;
+        "containment" : document.getElementById("edit-panel"),
+
+        //可选值为 x ， y， 限制div移动的方向;
+        //"axis" : "x",
+
+        //可选值为 鼠标移动上去的手型样式;
+        "cursor" : "move",
+
+        //自定义事件, 元素被点击时候调用， 回调的this就是被拖拽的元素;;
+        "start" : function() {
+            console.log("start");
+        },
+
+        //自定义事件, 元素被拖拽的时候调用， 回调的this就是被拖拽的元素;
+        "drag" : function () {
+            console.log("drag");
+        },
+
+        //自定义事件, 元素停止拖拽的时候调用， 回调的this就是被拖拽的元素;;
+        "stop" : function () {
+            console.log("stop");
+        }
+    });
+</script>
+</html>
