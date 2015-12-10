@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        body,html{
+            height:100px;
+            position: relative;
+            margin:0;
+            padding:0;
+        }
+    </style>
+    <script src="http://cdn.bootcss.com/jquery/1.9.0/jquery.js"></script>
+</head>
+<body>
+    <div id="div" style="width:1000px;height: 1000px; border:1px solid  #ccc; position: relative">
+
+    </div>
+</body>
+<script>
+
+    window.onload = function () {
+        new nono.Rect(document.body);
+        new nono.Rect(document.getElementById("div"));
+    }
+</script>
+</html>
