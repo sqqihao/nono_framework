@@ -1,0 +1,233 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+a {
+  text-decoration: none;
+  color: #000;
+}
+.fl {
+  float: left;
+}
+.fr {
+  float: right;
+}
+.clearFix:after {
+  content: "";
+  display: block;
+  height: 0;
+  overflow: hidde;
+  visibility: visible;
+  clear: both;
+}
+.clearFix {
+  *zoom: 1;
+}
+/*弹出框*/
+.wrapSize {
+  position: relative;
+}
+.wrapSize .l {
+  left: 0;
+  top: 50%;
+  margin-top: -2px;
+}
+.wrapSize .r {
+  right: 0;
+  top: 50%;
+  margin-top: -2px;
+}
+.wrapSize .b {
+  left: 50%;
+  bottom: 0;
+  margin-left: -2px;
+}
+.wrapSize .t {
+  left: 50%;
+  top: 0;
+  margin-left: -2px;
+}
+.wrapSize .l,
+.wrapSize .t,
+.wrapSize .b,
+.wrapSize .r {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: #666;
+  opacity: 0.4;
+}
+.f-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  background: #000;
+  opacity: 0.4;
+  z-index: 10;
+}
+.f-dialog-wrap {
+  position: absolute;
+  background: #fff;
+  word-break: break-all;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  -ms-border-radius: 4px;
+  -o-border-radius: 4px;
+  border-radius: 4px;
+}
+.f-dialog-wrap .f-dialog-container dt {
+  padding: 2px;
+  color: #fff;
+  background: #2ECC71;
+}
+.f-dialog-wrap .f-dialog-container dt .close {
+  line-height: 20px;
+  color: #fff;
+}
+.f-dialog-wrap .f-dialog-container dd {
+  padding: 10px;
+  font-size: 16px;
+}
+.f-dialog-wrap .f-dialog-footer {
+  padding: 4px;
+  text-align: center;
+  padding-top: 10px;
+}
+.f-dialog-wrap .f-dialog-footer span {
+  display: inline-block;
+  margin: 4px;
+  -webkit-box-shadow: 1px 1px 1px #eeeeee;
+  -moz-box-shadow: 1px 1px 1px #eeeeee;
+  -ms-box-shadow: 1px 1px 1px #eeeeee;
+  -o-box-shadow: 1px 1px 1px #eeeeee;
+  box-shadow: 1px 1px 1px #eeeeee;
+}
+/*弹出框*/
+/*小提示*/
+.samllTip-parent {
+  position: relative;
+}
+.samllTip-parent .smallTip-body {
+  position: absolute;
+  left: -100px;
+}
+.samllTip-parent .samllTip-wraper {
+  position: relative;
+}
+.samllTip-parent .smallTip-arrow-right {
+  top: 50%;
+  right: -4px;
+  width: 0;
+  height: 0;
+  margin-top: -5px;
+  border-top: 5px solid #fff;
+  border-bottom: 5px solid #fff;
+  border-left: 5px solid #BCDFF4;
+  position: absolute;
+}
+.samllTip-parent .smallTip-arrow-bottom,
+.samllTip-parent .smallTip-arrow-left,
+.samllTip-parent .smallTip-arrow-top,
+.samllTip-parent .smallTip-arrow-right {
+  display: none;
+}
+.samllTip-parent .smallTip-arrow-left {
+  top: 50%;
+  left: -4px;
+  margin-top: -4px;
+  width: 0;
+  height: 0;
+  border-top: 5px solid #fff;
+  border-bottom: 5px solid #fff;
+  border-right: 5px solid #BCDFF4;
+  position: absolute;
+}
+.samllTip-parent .smallTip-arrow-top {
+  left: 50%;
+  top: -10px;
+  margin-left: -5px;
+  width: 0;
+  height: 0;
+  border: 5px solid #fff;
+  border-bottom: 5px solid #BCDFF4;
+  position: absolute;
+}
+.samllTip-parent .smallTip-arrow-bottom {
+  bottom: -10px;
+  margin-left: -5px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border: 5px solid #fff;
+  border-top: 5px solid #BCDFF4;
+  position: absolute;
+}
+.samllTip-parent .smallTip-inner {
+  overflow: hidden;
+  background: #bcdff4;
+  border-width: 1px;
+  -webkit-border-radius: 6px;
+  -moz-border-radius: 6px;
+  -ms-border-radius: 6px;
+  -o-border-radius: 6px;
+  border-radius: 6px;
+  -webkit-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.1);
+  -moz-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.1);
+  -ms-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.1);
+  -o-box-shadow: 0 3px 7px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.1);
+}
+.samllTip-parent .smallTip-content {
+  padding: 6px;
+  margin: 1px;
+  color: #008bcb;
+  background-color: #FFF;
+  border-width: 1px;
+  -webkit-border-radius: 0 0 3px 3px;
+  -moz-border-radius: 0 0 3px 3px;
+  -ms-border-radius: 0 0 3px 3px;
+  -o-border-radius: 0 0 3px 3px;
+  border-radius: 0 0 3px 3px;
+  -webkit-background-clip: padding-box;
+  -moz-background-clip: padding-box;
+  background-clip: padding-box;
+}
+/*小提示*/
+/*手风琴*/
+.accordion {
+  border: 1px solid #efefef;
+  width: 200px;
+  height: 200px;
+  padding: 4px;
+}
+.accordion ul {
+  list-style: none;
+}
+.accordion ul li {
+  overflow: hidden;
+}
+.accordion ul li h4 {
+  text-align: center;
+  height: 20px;
+}
+.accordion ul li div {
+  height: 0;
+}
+.accordion ul li div img {
+  width: 100%;
+}
+/*手风琴*/
+/*控制台*/
+#console {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 30%;
+  height: 200px;
+  overflow: auto;
+  background: #fff;
+  border: 2px solid #f38080;
+}
+/*控制台*/
